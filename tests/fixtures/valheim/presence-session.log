@@ -1,0 +1,355 @@
+❯ bash start_server.local.sh
+Starting server PRESS CTRL-C to exit
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=4194304"
+    "memorysetup-bucket-allocator-block-count=1"
+    "memorysetup-main-allocator-block-size=900000000000000015"
+    "memorysetup-thread-allocator-block-size=900000000000000015"
+    "memorysetup-gfx-main-allocator-block-size=900000000000000015"
+    "memorysetup-gfx-thread-allocator-block-size=900000000000000015"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=4194304"
+    "memorysetup-profiler-bucket-allocator-block-count=1"
+    "memorysetup-profiler-allocator-block-size=900000000000000015"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=4194304"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Mono path[0] = '/home/valheim/Documents/Games/valheim-server/valheim_server_Data/Managed'
+Mono config path = '/home/valheim/Documents/Games/valheim-server/valheim_server_Data/MonoBleedingEdge/etc'
+Failed to open plugin: /home/valheim/Documents/Games/valheim-server/valheim_server_Data/Plugins/libparty.so
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.0.61f1 (74a0adb02c31)
+[Subsystems] Discovering subsystems at path /home/valheim/Documents/Games/valheim-server/valheim_server_Data/UnitySubsystems
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.054 seconds
+- Finished resetting the current domain, in  0.001 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+UnloadTime: 0.188240 ms
+01/01/2026 23:07:22: Set background loading budget to Low
+01/01/2026 23:07:22: Loading first scene!
+01/01/2026 23:07:22: Preferences initialized! Activating first scene!
+Unloading 4 Unused Serialized files (Serialized files now loaded: 8)
+UnloadTime: 0.023980 ms
+01/01/2026 23:07:22: Can't return the graphics config when it's not loaded!
+01/01/2026 23:07:22:
+01/01/2026 23:07:22: Starting to load scene:start.unity (900000000000000001)
+01/01/2026 23:07:22: Set background loading budget to Normal
+01/01/2026 23:07:22: Loaded localization file #0 - 'localization' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #1 - 'localization_extra' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #2 - 'heightmap_message' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #3 - 'localization_witch' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #4 - 'localization_ashlands' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #5 - 'localization_captions' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #6 - 'localization_combatupdate' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #7 - 'localization_celebrationupdate' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #0 - 'localization' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #1 - 'localization_extra' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #2 - 'heightmap_message' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #3 - 'localization_witch' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #4 - 'localization_ashlands' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #5 - 'localization_captions' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #6 - 'localization_combatupdate' language: 'English'
+01/01/2026 23:07:22: Loaded localization file #7 - 'localization_celebrationupdate' language: 'English'
+Unloading 170 unused Assets to reduce memory usage. Loaded Objects now: 2417.
+Total: 1.448270 ms (FindLiveObjects: 0.080780 ms CreateObjectMapping: 0.020670 ms MarkObjects: 1.236730 ms  DeleteObjects: 0.109960 ms)
+
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+Unloading 2 Unused Serialized files (Serialized files now loaded: 17)
+01/01/2026 23:07:26: Set background loading budget to High
+01/01/2026 23:07:26: GPU Device: 0000:0000 (Unknown)
+01/01/2026 23:07:29: Set background loading budget to Low
+UnloadTime: 4.428999 ms
+HDR Render Texture not supported, disabling HDR on reflection probe.
+01/01/2026 23:07:29: Missing audio clip in music respawn
+OnGUI function detected on MonoBehaviour, but not called, because IMGUI module is stripped.
+01/01/2026 23:07:29: Get create world SANITIZED_WORLD
+01/01/2026 23:07:29:  creating
+01/01/2026 23:07:29: Considering autobackup. World time: 0, short time: 7200, long time: 43200, backup count: 4
+01/01/2026 23:07:29: Creating first autobackup
+01/01/2026 23:07:29: Saving backup at: SANITIZED_WORLD_backup_auto-900000000000000009
+01/01/2026 23:07:29: Using environment steamid 892970
+01/01/2026 23:07:29: Using steam APPID:892970
+[S_API] SteamAPI_Init(): Loaded local 'steamclient.so' OK.
+Setting breakpad minidump AppID = 892970
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  900000000000000005 [API loaded no]
+[S_API FAIL] Tried to access Steam interface SteamNetworkingUtils004 before SteamAPI_Init succeeded.
+01/01/2026 23:07:29: Server ID 900000000000000006
+01/01/2026 23:07:29: Authentication:k_ESteamNetworkingAvailability_Waiting
+01/01/2026 23:07:29: Steam game server initialized
+01/01/2026 23:07:29: Valheim version: l-0.221.12 (network version 36)
+01/01/2026 23:07:29: Worldgenerator version setup:2
+01/01/2026 23:07:29: Console: Valheim l-0.221.12 (network version 36)
+01/01/2026 23:07:29: Console:
+01/01/2026 23:07:29: Console: type "help" - for commands
+01/01/2026 23:07:29: Console:
+01/01/2026 23:07:29: Render threading mode:SingleThreaded
+OnGUI function detected on MonoBehaviour, but not called, because IMGUI module is stripped.
+01/01/2026 23:07:29: Builder started
+01/01/2026 23:07:29: Sending PlayFab login request (attempt 1)
+01/01/2026 23:07:29: Login postponed until ID has been set.
+The shader Hidden/Dof/DepthOfFieldHdr (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.DepthOfField) is not supported on this platform!
+The image effect Main Camera (UnityStandardAssets.ImageEffects.DepthOfField) has been disabled as it's not supported on the current platform.
+The shader Hidden/SunShaftsComposite (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) is not supported on this platform!
+The shader Hidden/SimpleClear (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) is not supported on this platform!
+The image effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) has been disabled as it's not supported on the current platform.
+01/01/2026 23:07:29: DLL Not Found: This error usually occurs when you do not have the correct dependencies installed, and will prevent crossplay from working. The dependencies are different depending on which platform you play on.
+ For windows: You need VC++ Redistributables. https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170Linux: You need Pulse Audio. https://learn.microsoft.com/it-it/gaming/playfab/features/multiplayer/networking/linux-specific-requirementsSteam deck: Try using Proton Compatability Layer.Other platforms: If the issue persists, please report it as a bug.
+DllNotFoundException: party assembly:<unknown assembly> type:<unknown type> member:(null)
+  at (wrapper managed-to-native) PartyCSharpSDK.Interop.PFPInterop.PartyInitialize(byte[],PartyCSharpSDK.Interop.PARTY_HANDLE&)
+  at PartyCSharpSDK.SDK.PartyInitialize (System.String titleId, PartyCSharpSDK.PARTY_HANDLE& handle) [0x00006] in <900000000000000002>:0
+  at PlayFab.Party.PlayFabMultiplayerManager.InitializeImpl () [0x000be] in <900000000000000002>:0
+  at PlayFab.Party.PlayFabMultiplayerManager._Initialize () [0x0000a] in <900000000000000002>:0
+  at PlayFab.Party.PlayFabMultiplayerManager.Start () [0x00000] in <900000000000000002>:0
+
+01/01/2026 23:07:29: Starting music menu
+Unloading 93784 unused Assets to reduce memory usage. Loaded Objects now: 207154.
+Total: 84.701295 ms (FindLiveObjects: 11.828109 ms CreateObjectMapping: 13.017450 ms MarkObjects: 43.745137 ms  DeleteObjects: 16.110379 ms)
+
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+Unloading 3 Unused Serialized files (Serialized files now loaded: 18)
+UnloadTime: 7.796320 ms
+HDR Render Texture not supported, disabling HDR on reflection probe.
+HDR Render Texture not supported, disabling HDR on reflection probe.
+01/01/2026 23:07:30: Audioman already exist, destroying self
+OnGUI function detected on MonoBehaviour, but not called, because IMGUI module is stripped.
+01/01/2026 23:07:30: Console: Valheim l-0.221.12 (network version 36)
+01/01/2026 23:07:30: Console:
+01/01/2026 23:07:30: Console: type "help" - for commands
+01/01/2026 23:07:30: Console:
+01/01/2026 23:07:30: isModded: False
+01/01/2026 23:07:30: Zonesystem Awake 30937
+01/01/2026 23:07:30: DungeonDB Awake 30937
+01/01/2026 23:07:30: Worldgenerator version setup:2
+OnGUI function detected on MonoBehaviour, but not called, because IMGUI module is stripped.
+ArgumentNullException: Value cannot be null.
+Parameter name: shader
+  at UnityEngine.Bindings.ThrowHelper.ThrowArgumentNullException (System.Object obj, System.String parameterName) [0x00018] in <900000000000000003>:0
+  at UnityEngine.Material.CreateWithShader (UnityEngine.Material self, UnityEngine.Shader shader) [0x00003] in <900000000000000003>:0
+  at UnityEngine.Material..ctor (UnityEngine.Shader shader) [0x00008] in <900000000000000003>:0
+  at ShieldDomeImageEffect.Awake () [0x0000b] in <900000000000000004>:0
+
+01/01/2026 23:07:31: Console: /w [text] - Whisper
+01/01/2026 23:07:31: Console: /s [text] - Shout
+01/01/2026 23:07:31: Console: /die - Kill yourself
+01/01/2026 23:07:31: Console: /resetspawn - Reset spawn point
+01/01/2026 23:07:31: Console: /[emote]
+01/01/2026 23:07:31: Console: Emotes: wave, sit, challenge, cheer, nonono, thumbsup, point, blowkiss, bow, cower, cry, despair, flex, comehere, headbang, kneel, laugh, roar, shrug, dance, relax, toast, rest, vibe, loveyou
+01/01/2026 23:07:31: Console:
+Unloading 377 unused Assets to reduce memory usage. Loaded Objects now: 206060.
+Total: 37.961868 ms (FindLiveObjects: 6.250530 ms CreateObjectMapping: 4.239130 ms MarkObjects: 27.163748 ms  DeleteObjects: 0.308110 ms)
+
+01/01/2026 23:07:31: Zonesystem Start 30937
+01/01/2026 23:07:31: Added 3 locations, 0 vegetations, 0 environments, 0 biome env-setups, 0 clutter  from main
+01/01/2026 23:07:31: Added 1 locations, 0 vegetations, 2 environments, 0 biome env-setups, 0 clutter  from main
+01/01/2026 23:07:31: Added 27 locations, 25 vegetations, 5 environments, 1 biome env-setups, 3 clutter  from main
+01/01/2026 23:07:31: Added 4 locations, 0 vegetations, 1 environments, 0 biome env-setups, 0 clutter  from main
+01/01/2026 23:07:31: Added 25 locations, 33 vegetations, 8 environments, 2 biome env-setups, 2 clutter  from main
+01/01/2026 23:07:31: DungeonDB Start 30937
+01/01/2026 23:07:31: ZRpc timeout set to 30s
+01/01/2026 23:07:31: ZNET START
+01/01/2026 23:07:31: Load world: SANITIZED_WORLD (SANITIZED_WORLD)
+01/01/2026 23:07:31:   missing /home/valheim/.config/unity3d/IronGate/Valheim/worlds_local/SANITIZED_WORLD.db
+The shader Hidden/Dof/DepthOfFieldHdr (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.DepthOfField) is not supported on this platform!
+The image effect Main Camera (UnityStandardAssets.ImageEffects.DepthOfField) has been disabled as it's not supported on the current platform.
+The shader Hidden/SunShaftsComposite (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) is not supported on this platform!
+The shader Hidden/SimpleClear (UnityEngine.Shader) on effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) is not supported on this platform!
+The image effect Main Camera (UnityStandardAssets.ImageEffects.SunShafts) has been disabled as it's not supported on the current platform.
+01/01/2026 23:07:32: Game server connected
+01/01/2026 23:07:32: Generating locations
+01/01/2026 23:07:44: Failed to place all SwampRuin2, placed 10 out of 30
+01/01/2026 23:07:45: Failed to place all FireHole, placed 59 out of 75
+01/01/2026 23:07:51: Failed to place all TrollCave02, placed 195 out of 200
+01/01/2026 23:08:05: Failed to place all TarPit2, placed 19 out of 100
+01/01/2026 23:08:08: Failed to place all MountainCave02, placed 146 out of 160
+01/01/2026 23:08:18: Failed to place all FortressRuins, placed 93 out of 100
+01/01/2026 23:08:25: Failed to place all CharredTowerRuins3, placed 36 out of 40
+01/01/2026 23:08:29: Registering lobby
+01/01/2026 23:08:29: Opened Steam server
+01/01/2026 23:08:29:  Done generating locations, duration:57441.634 ms
+01/01/2026 23:09:30: Got status changed msg k_ESteamNetworkingConnectionState_Connecting
+01/01/2026 23:09:30: New connection
+01/01/2026 23:09:30: Accepting connection k_EResultOK
+01/01/2026 23:09:30: Connecting to Steamworks.SteamNetworkingIdentity
+01/01/2026 23:09:30: Got status changed msg k_ESteamNetworkingConnectionState_Connected
+01/01/2026 23:09:30: Connected
+01/01/2026 23:09:30: Got connection SteamID 900000000000000007
+01/01/2026 23:09:30: Got handshake from client 900000000000000007
+01/01/2026 23:09:30: Placed locations in zone 0,0  duration 4.738 ms
+01/01/2026 23:09:31: Placed locations in zone 3,0  duration 0.068 ms
+01/01/2026 23:09:31: Placed locations in zone -3,-4  duration 11.08 ms
+01/01/2026 23:09:32: Placed locations in zone -4,-3  duration 2.866 ms
+01/01/2026 23:09:32: Placed locations in zone 1,-4  duration 2.07 ms
+01/01/2026 23:09:32: Placed locations in zone 3,-4  duration 1.369 ms
+01/01/2026 23:09:32: Placed locations in zone 4,-4  duration 1.985 ms
+01/01/2026 23:09:33: Placed locations in zone 0,-3  duration 0.421 ms
+01/01/2026 23:09:33: Placed locations in zone -2,-2  duration 0.056 ms
+01/01/2026 23:09:33: Placed locations in zone -4,-2  duration 2.457 ms
+01/01/2026 23:09:33: Placed locations in zone -3,-2  duration 1.775 ms
+01/01/2026 23:09:33: Placed locations in zone 1,-2  duration 0.238 ms
+01/01/2026 23:09:33: Placed locations in zone 4,-2  duration 1.027 ms
+01/01/2026 23:09:34: Placed locations in zone -4,-1  duration 8.351 ms
+01/01/2026 23:09:34: Placed locations in zone 0,-1  duration 2.329 ms
+01/01/2026 23:09:34: Placed locations in zone 1,-1  duration 0.046 ms
+01/01/2026 23:09:34: Placed locations in zone 2,-1  duration 0.053 ms
+01/01/2026 23:09:34: Placed locations in zone 4,-1  duration 6.155 ms
+01/01/2026 23:09:34: Placed locations in zone -2,0  duration 0.347 ms
+01/01/2026 23:09:35: Placed locations in zone 1,1  duration 0.078 ms
+01/01/2026 23:09:36: Network version check, their:36, mine:36
+01/01/2026 23:09:36: [password-related line redacted]
+01/01/2026 23:09:36: RPC_Disconnect
+01/01/2026 23:09:36: Disposing socket
+01/01/2026 23:09:36: Closing socket 900000000000000007
+01/01/2026 23:09:36:   send queue size:0
+01/01/2026 23:09:36: Disposing socket
+01/01/2026 23:09:36: Got status changed msg k_ESteamNetworkingConnectionState_ClosedByPeer
+01/01/2026 23:09:36: Socket closed by peer Steamworks.SteamNetConnectionStatusChangedCallback_t
+01/01/2026 23:09:36: Got status changed msg k_ESteamNetworkingConnectionState_None
+01/01/2026 23:10:26: Got status changed msg k_ESteamNetworkingConnectionState_Connecting
+01/01/2026 23:10:26: New connection
+01/01/2026 23:10:26: Accepting connection k_EResultOK
+01/01/2026 23:10:26: Connecting to Steamworks.SteamNetworkingIdentity
+01/01/2026 23:10:26: Got status changed msg k_ESteamNetworkingConnectionState_Connected
+01/01/2026 23:10:26: Connected
+01/01/2026 23:10:26: Got connection SteamID 900000000000000007
+01/01/2026 23:10:26: Got handshake from client 900000000000000007
+01/01/2026 23:10:27: Placed locations in zone 4,2  duration 0.051 ms
+01/01/2026 23:10:28: Network version check, their:36, mine:36
+01/01/2026 23:10:28: Server: New peer connected,sending global keys
+01/01/2026 23:10:38: Got character ZDOID from PLAYER_A : -900000000000000011:1
+01/01/2026 23:15:14: Got status changed msg k_ESteamNetworkingConnectionState_Connecting
+01/01/2026 23:15:14: New connection
+01/01/2026 23:15:14: Accepting connection k_EResultOK
+01/01/2026 23:15:14: Connecting to Steamworks.SteamNetworkingIdentity
+01/01/2026 23:15:14: Got status changed msg k_ESteamNetworkingConnectionState_Connected
+01/01/2026 23:15:14: Connected
+01/01/2026 23:15:14: Got connection SteamID 900000000000000008
+01/01/2026 23:15:14: Got handshake from client 900000000000000008
+01/01/2026 23:15:22: Network version check, their:36, mine:36
+01/01/2026 23:15:22: [password-related line redacted]
+01/01/2026 23:15:23: RPC_Disconnect
+01/01/2026 23:15:23: Disposing socket
+01/01/2026 23:15:23: Closing socket 900000000000000008
+01/01/2026 23:15:23:   send queue size:0
+01/01/2026 23:15:23: Disposing socket
+01/01/2026 23:15:23: Got status changed msg k_ESteamNetworkingConnectionState_ClosedByPeer
+01/01/2026 23:15:23: Socket closed by peer Steamworks.SteamNetConnectionStatusChangedCallback_t
+01/01/2026 23:15:23: Got status changed msg k_ESteamNetworkingConnectionState_None
+01/01/2026 23:15:33: Got status changed msg k_ESteamNetworkingConnectionState_Connecting
+01/01/2026 23:15:33: New connection
+01/01/2026 23:15:33: Accepting connection k_EResultOK
+01/01/2026 23:15:33: Connecting to Steamworks.SteamNetworkingIdentity
+01/01/2026 23:15:33: Got status changed msg k_ESteamNetworkingConnectionState_Connected
+01/01/2026 23:15:33: Connected
+01/01/2026 23:15:33: Got connection SteamID 900000000000000008
+01/01/2026 23:15:33: Got handshake from client 900000000000000008
+01/01/2026 23:15:38: Network version check, their:36, mine:36
+01/01/2026 23:15:38: Server: New peer connected,sending global keys
+01/01/2026 23:15:49: Got character ZDOID from PLAYER_B : 900000000000000012:1
+01/01/2026 23:15:49: Placed locations in zone 11,6  duration 1.231 ms
+01/01/2026 23:15:51: Placed locations in zone 11,2  duration 6.256 ms
+01/01/2026 23:15:52: Placed locations in zone 14,2  duration 3.6 ms
+01/01/2026 23:15:52: Placed locations in zone 11,3  duration 0.417 ms
+01/01/2026 23:15:53: Placed locations in zone 13,4  duration 0.143 ms
+01/01/2026 23:15:53: Placed locations in zone 13,5  duration 8.535 ms
+01/01/2026 23:15:54: Placed locations in zone 12,5  duration 7.313 ms
+01/01/2026 23:15:55: Placed locations in zone 10,7  duration 7.138 ms
+01/01/2026 23:16:04: Got character ZDOID from PLAYER_B : 0:0
+01/01/2026 23:16:07: Got character ZDOID from PLAYER_B : 900000000000000012:3
+01/01/2026 23:16:48: Got character ZDOID from PLAYER_B : 0:0
+01/01/2026 23:16:48: Got character ZDOID from PLAYER_B : 900000000000000012:40
+01/01/2026 23:16:54: RPC_Disconnect
+01/01/2026 23:16:54: Destroying abandoned non persistent zdo 900000000000000012:43 owner 900000000000000012
+01/01/2026 23:16:54: Destroying abandoned non persistent zdo 900000000000000012:42 owner 900000000000000012
+01/01/2026 23:16:54: Destroying abandoned non persistent zdo 900000000000000012:32 owner 900000000000000012
+01/01/2026 23:16:54: Destroying abandoned non persistent zdo 900000000000000012:40 owner 900000000000000012
+01/01/2026 23:16:54: Disposing socket
+01/01/2026 23:16:54: Closing socket 900000000000000008
+01/01/2026 23:16:54:   send queue size:0
+01/01/2026 23:16:54: Disposing socket
+01/01/2026 23:16:54: Got status changed msg k_ESteamNetworkingConnectionState_ClosedByPeer
+01/01/2026 23:16:54: Socket closed by peer Steamworks.SteamNetConnectionStatusChangedCallback_t
+01/01/2026 23:16:54: Got status changed msg k_ESteamNetworkingConnectionState_None
+01/01/2026 23:17:00: RPC_Disconnect
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:1 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:28 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:29 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:195 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:31 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:57 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:119 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:246 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:247 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:244 owner -900000000000000011
+01/01/2026 23:17:00: Destroying abandoned non persistent zdo -900000000000000011:245 owner -900000000000000011
+01/01/2026 23:17:00: Disposing socket
+01/01/2026 23:17:00: Closing socket 900000000000000007
+01/01/2026 23:17:00:   send queue size:0
+01/01/2026 23:17:00: Disposing socket
+01/01/2026 23:17:00: Got status changed msg k_ESteamNetworkingConnectionState_ClosedByPeer
+01/01/2026 23:17:00: Socket closed by peer Steamworks.SteamNetConnectionStatusChangedCallback_t
+01/01/2026 23:17:00: Got status changed msg k_ESteamNetworkingConnectionState_None
+01/01/2026 23:17:32:  Connections 0 ZDOS:16260  sent:0 recv:0
+01/01/2026 23:18:46: Game - OnApplicationQuit
+01/01/2026 23:18:46: Available space to current user: 900000000000000010. Saving is blocked if below: 900000000000000013 bytes. Warnings are given if below: 900000000000000014
+01/01/2026 23:18:46: Shutting down
+01/01/2026 23:18:46: ZNet Shutdown
+01/01/2026 23:18:46: PrepareSave: clone done in 3ms
+01/01/2026 23:18:46: PrepareSave: ZDOExtraData.PrepareSave done in 8 ms
+01/01/2026 23:18:46: World save writing starting
+01/01/2026 23:18:46: World save writing started
+01/01/2026 23:18:46: Saved 16260 ZDOs
+01/01/2026 23:18:46: World save writing finishing
+01/01/2026 23:18:46: World save writing finished
+01/01/2026 23:18:46: World saved ( 61.499ms )
+01/01/2026 23:18:46: Considering autobackup. World time: 674.8397, short time: 7200, long time: 43200, backup count: 4
+01/01/2026 23:18:46: [session-related line redacted]
+01/01/2026 23:18:47: Unloading unused assets
+Unloading 1 Unused Serialized files (Serialized files now loaded: 18)
+01/01/2026 23:18:47: Sending disconnect msg
+ZPlayFabMatchmaking::UnregisterServer - unregistering server now. State: Uninitialized
+01/01/2026 23:18:47: Disposing socket
+01/01/2026 23:18:47: Stopping listening socket
+01/01/2026 23:18:47: Last socket, unregistering callback
+01/01/2026 23:18:47: ZSteamSocket  UnregisterGlobalCallbacks, existing sockets:0
+01/01/2026 23:18:47: Stopping build thread
+Unloading 526 unused Assets to reduce memory usage. Loaded Objects now: 206957.
+Total: 39.095558 ms (FindLiveObjects: 7.392279 ms CreateObjectMapping: 6.000390 ms MarkObjects: 25.308069 ms  DeleteObjects: 0.394360 ms)
+
+01/01/2026 23:18:49: Steam manager on destroy
+01/01/2026 23:18:49: ZNet OnDestroy
+01/01/2026 23:18:49: Net scene destroyed
+[Physics::Module] Cleanup current backned.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.

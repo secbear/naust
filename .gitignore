@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+.pytest_cache/
+.ruff_cache/
+.coverage
+build/
+dist/
+wheels/
+*.egg-info
+htmlcov/
+
+# Virtual environments
+.venv/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Nix-generated outputs
+.direnv/
+result
+result-*
+
+# Raw runtime captures may contain credentials and player identifiers.
+*.log
+!tests/fixtures/**/*.log

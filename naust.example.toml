@@ -1,0 +1,45 @@
+log_level = "INFO"
+
+[storage]
+endpoint = "http://127.0.0.1:9000"
+bucket = "naust-worlds"
+region = "us-east-1"
+
+[control]
+bind_host = "127.0.0.1"
+bind_port = 8000
+
+[agent]
+control_url = "http://127.0.0.1:8000"
+
+[gateway]
+bind_host = "0.0.0.0"
+control_url = "http://127.0.0.1:8000"
+
+[[worlds]]
+id = "midgard"
+name = "Midgard"
+owner = "friends-of-midgard"
+mode = "steam-direct"
+game_port = 2456
+bepinex_enabled = false
+idle_timeout = "PT15M"
+connection_grace_period = "PT3M"
+# Defaults to "worlds/<id>"; override only when using an existing object layout.
+# storage_prefix = "imports/midgard"
+
+[worlds.resources]
+cpu_millicores = 1000
+memory_mib = 2048
+
+[[worlds]]
+id = "yggdrasil"
+name = "Yggdrasil"
+owner = "friends-of-yggdrasil"
+mode = "crossplay"
+idle_timeout = "PT15M"
+connection_grace_period = "PT3M"
+
+[worlds.resources]
+cpu_millicores = 1000
+memory_mib = 2048

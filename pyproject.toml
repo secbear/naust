@@ -1,0 +1,39 @@
+[project]
+name = "naust"
+version = "0.1.0"
+description = "Scale-to-zero orchestration for persistent Valheim worlds"
+readme = "README.md"
+authors = [
+    { name = "Bryce Thorpe" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-settings>=2.15.0",
+    "structlog>=26.1.0",
+    "typer>=0.27.1",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.12",
+]
+
+[project.scripts]
+naust = "naust.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
