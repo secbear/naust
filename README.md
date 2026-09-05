@@ -6,6 +6,19 @@ A design specification and a staged build guide.
 
 ---
 
+## Status
+
+Projects 0 through 2 are implemented and tested: configuration and domain
+vocabulary, the Valheim log adapter and presence tracker, and the supervisor
+that launches a backend, tracks presence, and drains it with a verified save.
+`naust parse <logfile>` replays a capture; `naust agent --world <id>` runs a
+world. A NixOS module runs worlds as systemd units on one host and can power
+the host off after a clean drain — see [docs/nixos.md](docs/nixos.md). Design
+decisions live in [docs/decisions/](docs/decisions/).
+
+The gateway, Control, object-store persistence, Discord, and Kubernetes
+projects are specified below and not yet built.
+
 ## How to use this document
 
 This document has three parts. You should not need to hunt through it: the maps

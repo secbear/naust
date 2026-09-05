@@ -85,6 +85,7 @@ uv run pytest
 uv run pre-commit run --all-files
 ```
 
-The service entry points exit immediately by design. Subprocess supervision,
-log parsing, UDP sockets, object transfers, and lifecycle orchestration belong
-to later projects.
+At Project 0 the service entry points exited immediately by design. Since
+Project 2, `naust agent --world <id>` supervises a real backend (see
+`docs/decisions/0003-single-node-agent.md`); `naust control` and
+`naust gateway` remain stubs until their projects.
