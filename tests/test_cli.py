@@ -95,7 +95,7 @@ def test_parse_replays_the_recorded_fixture() -> None:
     ]
     assert sum("  ready" in line for line in lines) == 1
     assert sum("  saved " in line for line in lines) == 1
-    assert sum("  death PLAYER_B" in line for line in lines) == 2
+    assert sum("  version l-0.221.12" in line for line in lines) == 1
     assert lines[-1] == "present: 0 [-]"
 
 
@@ -119,10 +119,19 @@ def test_parse_short_timeline(tmp_path: Path) -> None:
     assert result.output.splitlines() == [
         "L     2  ready",
         "L     3  join  Alice -> Alice",
-        "L     4  death Alice",
         "L     8  join  Bob -> Alice, Bob",
         "present: 2 [Alice, Bob]",
     ]
+
+
+def test_parse_rejects_unknown_game(tmp_path: Path) -> None:
+    log = tmp_path / "session.log"
+    log.write_text("")
+
+    result = runner.invoke(app, ["parse", "--game", "minecraft", str(log)])
+
+    assert result.exit_code == 2
+    assert "unknown game" in result.output
 
 
 def test_parse_empty_and_garbage_files_finish_cleanly(tmp_path: Path) -> None:

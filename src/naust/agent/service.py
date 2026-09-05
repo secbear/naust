@@ -13,9 +13,7 @@ from dataclasses import dataclass, field
 
 import structlog
 
-from naust.agent import valheim
 from naust.agent.config import AgentConfig
-from naust.agent.observations import GameAdapter, JoinCodeObserved, Observation, WorldSavedObserved
 from naust.agent.presence import PresenceTracker, PresenceTransition
 from naust.agent.supervisor import (
     BackendCommand,
@@ -25,6 +23,9 @@ from naust.agent.supervisor import (
     StartupFailed,
 )
 from naust.domain.world import WorldConfig
+from naust.games.facts import BackendVersion, Fact, JoinInfo, SaveCompleted
+from naust.games.profile import GameProfile
+from naust.games.registry import get_profile
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -44,7 +45,7 @@ async def run_world(
     world: WorldConfig,
     config: AgentConfig,
     *,
-    adapter: GameAdapter | None = None,
+    profile: GameProfile | None = None,
     command: BackendCommand | None = None,
     files: SaveFiles | None = None,
     policy: DrainPolicy | None = None,
@@ -54,10 +55,13 @@ async def run_world(
 
     ``stop`` is the operator's drain request; SIGTERM and SIGINT set it too.
     The idle timer sets it once the world has been empty for
-    ``world.idle_timeout`` after ``world.connection_grace_period`` has passed.
+    ``world.idle_timeout`` after the connection grace period has passed. The
+    grace period is the larger of the world's own and the profile's minimum
+    for inferred presence.
     """
 
-    log = structlog.get_logger("naust.agent").bind(world=world.id)
+    profile = profile or get_profile(world.game)
+    log = structlog.get_logger("naust.agent").bind(world=world.id, game=profile.name)
     launch = config.backend
     stop = stop or asyncio.Event()
     clock = _IdleClock()
@@ -72,30 +76,33 @@ async def run_world(
             left=sorted(transition.left),
         )
 
-    def on_observation(observation: Observation) -> None:
-        match observation:
-            case WorldSavedObserved(duration_ms=duration_ms):
+    def on_fact(fact: Fact) -> None:
+        match fact:
+            case SaveCompleted(duration_ms=duration_ms):
                 log.info("backend.saved", duration_ms=duration_ms)
-            case JoinCodeObserved(code=code):
-                log.info("backend.join_code", join_code=code)
+            case JoinInfo(code=code, address=address, port=port):
+                log.info("backend.join", kind=fact.kind, code=code, address=address, port=port)
+            case BackendVersion(version=version):
+                log.info("backend.version", version=version)
             case _:
                 pass
 
     supervisor = BackendSupervisor(
-        command or valheim.build_command(world, launch),
-        adapter or valheim.ValheimAdapter(),
-        files or valheim.save_files(world, launch),
-        policy=policy or valheim.drain_policy(launch),
+        command or profile.build_command(world, launch),
+        profile.observer(),
+        profile.resolver(),
+        files or profile.save_files(world, launch),
+        policy=policy or profile.drain_policy(launch),
         tracker=PresenceTracker(max_players=launch.max_players),
         on_transition=on_transition,
-        on_observation=on_observation,
+        on_fact=on_fact,
     )
 
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
     try:
-        return await _supervise(supervisor, world, config, clock, stop, log)
+        return await _supervise(supervisor, world, profile, config, clock, stop, log)
     finally:
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.remove_signal_handler(sig)
@@ -104,6 +111,7 @@ async def run_world(
 async def _supervise(
     supervisor: BackendSupervisor,
     world: WorldConfig,
+    profile: GameProfile,
     config: AgentConfig,
     clock: _IdleClock,
     stop: asyncio.Event,
@@ -124,10 +132,16 @@ async def _supervise(
         return EXIT_FAILED
     ready_at = time.monotonic()
     clock.idle_since = ready_at
-    log.info("backend.ready", pid=supervisor.pid, join_code=supervisor.join_code)
+    log.info(
+        "backend.ready",
+        pid=supervisor.pid,
+        version=supervisor.version,
+        join=None if supervisor.join_info is None else supervisor.join_info.code,
+    )
 
     idle = asyncio.create_task(
-        _idle_watch(supervisor, world, config, clock, ready_at, stop, log), name="naust-idle"
+        _idle_watch(supervisor, world, profile, config, clock, ready_at, stop, log),
+        name="naust-idle",
     )
     stop_requested = asyncio.create_task(stop.wait(), name="naust-stop")
     exited = asyncio.create_task(supervisor.wait_exit(), name="naust-exit")
@@ -164,13 +178,16 @@ async def _supervise(
 async def _idle_watch(
     supervisor: BackendSupervisor,
     world: WorldConfig,
+    profile: GameProfile,
     config: AgentConfig,
     clock: _IdleClock,
     ready_at: float,
     stop: asyncio.Event,
     log: structlog.stdlib.BoundLogger,
 ) -> None:
-    grace = world.connection_grace_period.total_seconds()
+    if world.idle_timeout is None:
+        return  # orchestrator mode: report and obey, never decide
+    grace = max(world.connection_grace_period, profile.minimum_connection_grace).total_seconds()
     idle_timeout = world.idle_timeout.total_seconds()
     interval = config.idle_check_interval.total_seconds()
     while not stop.is_set():

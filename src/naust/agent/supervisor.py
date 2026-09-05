@@ -1,9 +1,9 @@
 """Supervise one backend process through start, readiness, and drain.
 
 The supervisor owns the subprocess and the only stream of truth about it: its
-stdout. Lines are fed through a :class:`GameAdapter` into a
-:class:`PresenceTracker`; readiness, save completion, and the join code are
-recorded from the same stream. It contains no policy about *when* to drain —
+stdout. Lines go through the game's observer and resolver into a
+:class:`PresenceTracker`; readiness, save completion, version, and join
+information are recorded from the same facts. It contains no policy about *when* to drain —
 that is the caller's decision — but it owns the drain sequence itself,
 because that is the sequence that protects a hundred-hour base.
 
@@ -29,14 +29,16 @@ from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
 
-from naust.agent.observations import (
-    GameAdapter,
-    JoinCodeObserved,
-    Observation,
-    ServerReadyObserved,
-    WorldSavedObserved,
-)
 from naust.agent.presence import PresenceTracker, PresenceTransition
+from naust.games.facts import (
+    BackendReady,
+    BackendVersion,
+    Fact,
+    JoinInfo,
+    Observer,
+    Resolver,
+    SaveCompleted,
+)
 
 
 class BackendState(StrEnum):
@@ -154,13 +156,14 @@ class BackendSupervisor:
     def __init__(
         self,
         command: BackendCommand,
-        adapter: GameAdapter,
+        observer: Observer,
+        resolver: Resolver,
         save_files: SaveFiles,
         *,
         policy: DrainPolicy | None = None,
         tracker: PresenceTracker | None = None,
         on_transition: Callable[[PresenceTransition], None] | None = None,
-        on_observation: Callable[[Observation], None] | None = None,
+        on_fact: Callable[[Fact], None] | None = None,
         recent_lines: int = 200,
     ) -> None:
         self.command = command
@@ -168,11 +171,14 @@ class BackendSupervisor:
         self.tracker = tracker or PresenceTracker()
         self.save_files = save_files
         self.state = BackendState.STARTING
-        self.join_code: str | None = None
+        self.join_info: JoinInfo | None = None
+        self.version: str | None = None
         self.last_save_ms: float | None = None
-        self._adapter = adapter
+        self.saves: int = 0
+        self._observer = observer
+        self._resolver = resolver
         self._on_transition = on_transition
-        self._on_observation = on_observation
+        self._on_fact = on_fact
         self._recent: deque[str] = deque(maxlen=recent_lines)
         self._process: asyncio.subprocess.Process | None = None
         self._pump: asyncio.Task[None] | None = None
@@ -224,7 +230,7 @@ class BackendSupervisor:
         await process.stdin.drain()
 
     async def wait_ready(self, timeout: timedelta) -> None:
-        """Block until the adapter's ready signal, else raise :class:`StartupFailed`."""
+        """Block until the game reports ready, else raise :class:`StartupFailed`."""
 
         process = self._require_process()
         signals = self._require_signals()
@@ -327,29 +333,34 @@ class BackendSupervisor:
                     break
                 line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
                 self._recent.append(line)
-                observation = self._adapter.parse_line(line)
-                if observation is not None:
-                    self._handle(observation)
+                observation = self._observer.parse_line(line)
+                if observation is None:
+                    continue
+                for fact in self._resolver.resolve(observation):
+                    self._handle(fact)
         finally:
             signals.eof.set()
 
-    def _handle(self, observation: Observation) -> None:
+    def _handle(self, fact: Fact) -> None:
         signals = self._require_signals()
-        match observation:
-            case ServerReadyObserved():
+        match fact:
+            case BackendReady():
                 if self.state is BackendState.STARTING:
                     self.state = BackendState.READY
                 signals.ready.set()
-            case WorldSavedObserved(duration_ms=duration_ms):
+            case SaveCompleted(duration_ms=duration_ms):
                 self.last_save_ms = duration_ms
+                self.saves += 1
                 signals.saved.set()
-            case JoinCodeObserved(code=code):
-                self.join_code = code
+            case JoinInfo():
+                self.join_info = fact
+            case BackendVersion(version=version):
+                self.version = version
             case _:
                 pass
-        if self._on_observation is not None:
-            self._on_observation(observation)
-        transition = self.tracker.observe(observation)
+        if self._on_fact is not None:
+            self._on_fact(fact)
+        transition = self.tracker.observe(fact)
         if transition is not None and self._on_transition is not None:
             self._on_transition(transition)
 

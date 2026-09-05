@@ -37,6 +37,10 @@ type StoragePrefix = Annotated[
     ),
 ]
 type PositiveDuration = Annotated[timedelta, Field(gt=timedelta(0))]
+type GameName = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=32, pattern=r"^[a-z0-9-]+$"),
+]
 type GamePort = Annotated[int, Field(ge=1, le=65_534)]
 
 
@@ -76,8 +80,9 @@ class _WorldConfigBase(_DomainModel):
     id: WorldId
     name: DisplayName
     owner: OwnerLabel
+    game: GameName = "valheim"
     storage_prefix: StoragePrefix = Field(default_factory=_default_storage_prefix)
-    idle_timeout: PositiveDuration = timedelta(minutes=15)
+    idle_timeout: PositiveDuration | None = timedelta(minutes=15)
     connection_grace_period: PositiveDuration = timedelta(minutes=3)
     resources: ResourceIntent = Field(default_factory=ResourceIntent)
 

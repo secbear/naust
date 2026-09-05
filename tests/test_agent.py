@@ -1,6 +1,7 @@
 """The Agent runtime end to end against the fake backend."""
 
 import asyncio
+import dataclasses
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -8,11 +9,12 @@ from pathlib import Path
 import pytest
 from pydantic import SecretStr
 
-from naust.agent import valheim
 from naust.agent.config import AgentConfig, BackendLaunchConfig
 from naust.agent.service import EXIT_FAILED, EXIT_OK, run_world
 from naust.agent.supervisor import BackendCommand, DrainPolicy
 from naust.domain.world import CrossplayWorldConfig, SteamDirectWorldConfig
+from naust.games import registry
+from naust.games.valheim import profile as valheim
 
 FAKE_BACKEND = Path(__file__).parent / "fake_backend.py"
 
@@ -54,12 +56,22 @@ def policy() -> DrainPolicy:
     )
 
 
+# Valheim's profile demands three minutes of grace for its inferred presence;
+# tests would wait that long before an idle drain, so they shrink it.
+FAST_PROFILE = dataclasses.replace(valheim.VALHEIM, inferred_presence_grace=timedelta(0))
+
+
 async def test_empty_world_drains_on_idle_timeout(tmp_path: Path) -> None:
     w = world()
     files = valheim.save_files(w, config(tmp_path).backend)
 
     code = await run_world(
-        w, config(tmp_path), command=fake(tmp_path), files=files, policy=policy()
+        w,
+        config(tmp_path),
+        profile=FAST_PROFILE,
+        command=fake(tmp_path),
+        files=files,
+        policy=policy(),
     )
 
     assert code == EXIT_OK
@@ -79,7 +91,13 @@ async def test_operator_stop_drains_immediately(tmp_path: Path) -> None:
     requester = asyncio.create_task(request_stop())
     code = await asyncio.wait_for(
         run_world(
-            w, config(tmp_path), command=fake(tmp_path), files=files, policy=policy(), stop=stop
+            w,
+            config(tmp_path),
+            profile=FAST_PROFILE,
+            command=fake(tmp_path),
+            files=files,
+            policy=policy(),
+            stop=stop,
         ),
         timeout=15,
     )
@@ -117,12 +135,64 @@ async def test_unexpected_exit_is_reported(tmp_path: Path) -> None:
     assert code == EXIT_FAILED
 
 
+async def test_profile_minimum_grace_delays_idle_drain(tmp_path: Path) -> None:
+    """Inferred presence must not be trusted at zero immediately after start."""
+
+    w = world(idle=0.2, grace=0.1)
+    slow = dataclasses.replace(valheim.VALHEIM, inferred_presence_grace=timedelta(seconds=2))
+    stop = asyncio.Event()
+    started = asyncio.get_running_loop().time()
+
+    code = await run_world(
+        w,
+        config(tmp_path),
+        profile=slow,
+        command=fake(tmp_path),
+        files=valheim.save_files(w, config(tmp_path).backend),
+        policy=policy(),
+        stop=stop,
+    )
+
+    assert code == EXIT_OK
+    assert asyncio.get_running_loop().time() - started >= 2.0
+
+
+async def test_orchestrator_mode_never_drains_on_its_own(tmp_path: Path) -> None:
+    w = CrossplayWorldConfig(
+        id="testworld",
+        name="Test World",
+        owner="tests",
+        idle_timeout=None,
+        connection_grace_period=timedelta(milliseconds=100),
+    )
+    stop = asyncio.Event()
+
+    async def operator() -> None:
+        await asyncio.sleep(1.5)
+        stop.set()
+
+    requester = asyncio.create_task(operator())
+    code = await run_world(
+        w,
+        config(tmp_path),
+        profile=FAST_PROFILE,
+        command=fake(tmp_path),
+        files=valheim.save_files(w, config(tmp_path).backend),
+        policy=policy(),
+        stop=stop,
+    )
+    await requester
+
+    assert code == EXIT_OK
+
+
 async def test_failed_drain_exits_nonzero(tmp_path: Path) -> None:
     w = world()
 
     code = await run_world(
         w,
         config(tmp_path),
+        profile=FAST_PROFILE,
         command=fake(tmp_path, "--behaviour", "corrupt-save"),
         files=valheim.save_files(w, config(tmp_path).backend),
         policy=policy(),
@@ -193,3 +263,18 @@ def test_drain_policy_comes_from_launch_config() -> None:
 
     assert valheim.drain_policy(launch).save_timeout == timedelta(seconds=7)
     assert valheim.drain_policy(launch).stop_timeout == launch.stop_timeout
+
+
+def test_valheim_profile_publishes_its_capabilities() -> None:
+    profile = registry.get_profile("valheim")
+
+    assert profile.capabilities.presence == "inferred"
+    assert profile.capabilities.join == "code"
+    assert profile.save.kind == "signal"
+    assert profile.minimum_connection_grace == timedelta(minutes=3)
+    assert profile.capabilities.as_dict()["query"] is None
+
+
+def test_unknown_game_is_an_error() -> None:
+    with pytest.raises(ValueError, match="unknown game"):
+        registry.get_profile("minecraft")

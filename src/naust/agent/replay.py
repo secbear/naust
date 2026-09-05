@@ -1,34 +1,36 @@
-"""Compose an adapter and a tracker over a stream of lines.
+"""Compose observer, resolver, and tracker over a stream of lines.
 
-This is the loop the live Agent will run against a subprocess and the replay
-CLI runs against a file. It imports no game-specific module.
+The same loop runs against a subprocess in the supervisor and against a file
+in the replay CLI. It imports no game.
 """
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
-from naust.agent.observations import GameAdapter, Observation
 from naust.agent.presence import PresenceTracker, PresenceTransition
+from naust.games.facts import Fact, Observer, Resolver
 
 
 @dataclass(frozen=True, slots=True)
 class ReplayEvent:
-    """One line that produced an observation, and any transition it caused."""
+    """One line that the observer recognised, what it resolved to, and what changed."""
 
     line_number: int
-    observation: Observation
-    transition: PresenceTransition | None
+    observation: object
+    facts: tuple[Fact, ...]
+    transitions: tuple[PresenceTransition, ...]
 
 
 def replay(
     lines: Iterable[str],
-    adapter: GameAdapter,
+    observer: Observer,
+    resolver: Resolver,
     tracker: PresenceTracker,
 ) -> Iterator[ReplayEvent]:
-    """Feed lines through the adapter into the tracker, yielding what mattered."""
-
     for line_number, line in enumerate(lines, start=1):
-        observation = adapter.parse_line(line)
+        observation = observer.parse_line(line)
         if observation is None:
             continue
-        yield ReplayEvent(line_number, observation, tracker.observe(observation))
+        facts = resolver.resolve(observation)
+        transitions = tuple(t for t in map(tracker.observe, facts) if t is not None)
+        yield ReplayEvent(line_number, observation, facts, transitions)

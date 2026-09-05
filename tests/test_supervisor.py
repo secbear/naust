@@ -20,7 +20,8 @@ from naust.agent.supervisor import (
     StartupFailed,
     verify_save,
 )
-from naust.agent.valheim import ValheimAdapter
+from naust.games.valheim.observer import ValheimObserver
+from naust.games.valheim.resolver import ValheimResolver
 
 FAKE_BACKEND = Path(__file__).parent / "fake_backend.py"
 FAST = DrainPolicy(
@@ -46,7 +47,8 @@ def save_files(save_dir: Path, world: str = "testworld") -> SaveFiles:
 def supervisor(tmp_path: Path, *args: str, **kwargs) -> BackendSupervisor:
     return BackendSupervisor(
         fake_backend(tmp_path, *args),
-        ValheimAdapter(),
+        ValheimObserver(),
+        ValheimResolver(),
         save_files(tmp_path),
         policy=FAST,
         **kwargs,
@@ -141,6 +143,26 @@ async def test_output_feeds_presence_and_callbacks(tmp_path: Path) -> None:
     assert sup.tracker.snapshot.players == {"Bob"}
     assert sup.last_save_ms == 5.0
     await sup.drain()
+
+
+async def test_facts_are_recorded_and_reported(tmp_path: Path) -> None:
+    facts: list = []
+    sup = supervisor(tmp_path, on_fact=facts.append)
+    await sup.start()
+    await sup.wait_ready(READY_TIMEOUT)
+    await sup.write_stdin(
+        "say 01/01/2026 00:00:00: Valheim version: 1.0.0 (network version 40)\n"
+        'say 01/01/2026 00:00:00: Session "x" with join code 604510 and IP 1.2.3.4:2456 '
+        "is active with 0 player(s)\n"
+    )
+    await until(lambda: sup.join_info is not None)
+
+    assert sup.version == "1.0.0"
+    assert sup.join_info is not None and sup.join_info.code == "604510"
+    assert any(type(f).__name__ == "BackendReady" for f in facts)
+    report = await sup.drain()
+    assert report.succeeded
+    assert sup.saves == 1
 
 
 async def test_recent_output_is_bounded(tmp_path: Path) -> None:
