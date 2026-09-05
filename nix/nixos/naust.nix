@@ -73,9 +73,15 @@ let
     ) cfg.sinks
   );
 
-  configDir = pkgs.writeTextDir "naust.toml" (
-    builtins.readFile (tomlFormat.generate "naust.toml" cfg.resolvedSettings)
-  );
+  # A directory holding naust.toml, built like any other derivation. Reading
+  # the generated file back at evaluation time would be import-from-derivation
+  # and would break evaluating this host from another platform.
+  configDir = pkgs.linkFarm "naust-config" [
+    {
+      name = "naust.toml";
+      path = tomlFormat.generate "naust.toml" cfg.resolvedSettings;
+    }
+  ];
 
   # Steam's FHS environment plus the libraries libparty.so (PlayFab, used for
   # crossplay) links against and Steam itself does not guarantee.
