@@ -300,3 +300,91 @@ def test_valheim_profile_publishes_its_capabilities() -> None:
 def test_unknown_game_is_an_error() -> None:
     with pytest.raises(ValueError, match="unknown game"):
         registry.get_profile("minecraft")
+
+
+# ---- the host contract, end to end -------------------------------------------
+
+
+async def test_runtime_speaks_the_contract(tmp_path: Path, capture, socket_dir: Path) -> None:
+    import aiohttp
+
+    from naust.agent.config import SinkConfig, SurfaceConfig
+    from naust.agent.runtime import WorldRuntime
+
+    w = world(idle=60, grace=60)
+    base = config(tmp_path)
+    cfg = base.model_copy(
+        update={
+            "sinks": (
+                SinkConfig(kind="webhook", url=f"{capture.url}/events", token="t0k"),
+                SinkConfig(kind="discord", url=f"{capture.url}/discord"),
+            ),
+            "surface": SurfaceConfig(socket_dir=socket_dir, metrics_port=0),
+            "source_host": "test-host",
+        }
+    )
+    runtime = WorldRuntime(
+        w,
+        cfg,
+        profile=FAST_PROFILE,
+        command=fake(tmp_path),
+        files=valheim.save_files(w, cfg.backend),
+        policy=policy(),
+    )
+    run = asyncio.create_task(runtime.run())
+    await asyncio.wait_for(runtime.started.wait(), 5)
+    unix = aiohttp.UnixConnector(path=str(socket_dir / "testworld.sock"))
+
+    async with aiohttp.ClientSession(connector=unix) as control:
+        for _ in range(100):
+            async with control.get("http://naust/readyz") as r:
+                if r.status == 200:
+                    break
+            await asyncio.sleep(0.05)
+        else:
+            raise AssertionError("never ready")
+
+        await runtime.supervisor.write_stdin("join Alice 5\n")
+        for _ in range(100):
+            if runtime.status.count == 1:
+                break
+            await asyncio.sleep(0.02)
+
+        metrics_url = f"http://127.0.0.1:{runtime.surface.tcp_port}/metrics"
+        async with aiohttp.ClientSession() as http, http.get(metrics_url) as r:
+            body = await r.text()
+        assert 'naust_players{world="testworld"} 1.0' in body
+        assert 'naust_backend_state{state="READY",world="testworld"} 1.0' in body
+
+        async with control.get("http://naust/v1/status") as r:
+            document = await r.json()
+        assert document["state"] == "READY"
+        assert document["presence"]["players"][0]["id"] == "Alice"
+        assert document["capabilities"]["presence"] == "inferred"
+
+        async with control.post("http://naust/v1/drain") as r:
+            assert r.status == 202
+
+    assert await asyncio.wait_for(run, 20) == EXIT_OK
+
+    events = [r["json"] for r in capture.by_path("/events")]
+    types = [e["type"].removeprefix("io.naust.") for e in events]
+    assert types[0] == "backend.starting"
+    assert types[-1] == "drain.finished"
+    assert "backend.ready" in types
+    assert "presence.changed" in types
+    assert "drain.started" in types
+    sequences = [e["naustsequence"] for e in events]
+    assert sequences == sorted(sequences) and len(set(sequences)) == len(sequences)
+    assert all(e["source"] == "naust://test-host/worlds/testworld" for e in events)
+    assert all(r["headers"]["Authorization"] == "Bearer t0k" for r in capture.by_path("/events"))
+    started = next(e for e in events if e["type"].endswith("drain.started"))
+    assert started["data"]["trigger"] == "command"
+    finished = events[-1]
+    assert finished["data"]["succeeded"] is True
+    assert finished["data"]["session"]["peakPlayers"] == 1
+    assert finished["data"]["session"]["saves"] == 1
+    discord = [r["json"]["content"] for r in capture.by_path("/discord")]
+    assert any("Alice joined" in m for m in discord)
+    assert any("saved and stopped" in m for m in discord)
+    assert not (socket_dir / "testworld.sock").exists()
