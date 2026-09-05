@@ -16,8 +16,12 @@ world. A NixOS module runs worlds as systemd units on one host and can power
 the host off after a clean drain — see [docs/nixos.md](docs/nixos.md). Design
 decisions live in [docs/decisions/](docs/decisions/).
 
-The gateway, Control, object-store persistence, Discord, and Kubernetes
-projects are specified below and not yet built.
+[docs/architecture.md](docs/architecture.md) is the target design: the agent
+as an Agones-style sidecar for games that cannot integrate an SDK, with a
+versioned contract (status, CloudEvents, commands, metrics, exit status) at
+the host boundary so any orchestrator can be built on top later. The gateway,
+Control, object-store persistence, Discord bot, and Kubernetes projects below
+are optional substrates above that contract and are not built.
 
 ## How to use this document
 
