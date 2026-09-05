@@ -26,3 +26,12 @@ jobs:
         run: uv run ruff check .
       - name: Test
         run: uv run pytest
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Flake check
+        run: nix flake check --no-update-lock-file --print-build-logs
