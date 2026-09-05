@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import aiohttp
+from conftest import requires_network
 
 from naust.agent.metrics import AgentMetrics
 from naust.agent.status import AgentStatus
@@ -10,6 +11,7 @@ from naust.agent.supervisor import BackendState, SaveFiles
 from naust.agent.surface import Surface
 
 
+@requires_network
 async def test_surface_routes(tmp_path: Path, socket_dir: Path) -> None:
     status = AgentStatus(
         world="w",

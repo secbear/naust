@@ -3,7 +3,7 @@
 import asyncio
 
 import pytest
-from conftest import Capture
+from conftest import Capture, requires_network
 
 from naust.agent.sinks import DiscordSink, Dispatcher, WebhookSink, render_discord
 
@@ -78,6 +78,7 @@ async def test_publish_never_blocks_and_drops_oldest(capture: Capture) -> None:
     await asyncio.wait_for(dispatcher.close(flush_timeout=0.1), timeout=5)
 
 
+@requires_network
 async def test_unreachable_sink_is_a_counted_failure() -> None:
     dispatcher = Dispatcher(
         [WebhookSink("http://127.0.0.1:9/hook")], attempts=2, backoff=0.01, timeout=0.5

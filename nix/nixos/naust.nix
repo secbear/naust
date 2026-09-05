@@ -21,8 +21,11 @@ let
     {
       inherit id;
       inherit (world) name owner mode;
-      idle_timeout = world.idleTimeout;
+      game = "valheim";
       connection_grace_period = world.connectionGracePeriod;
+    }
+    // lib.optionalAttrs (world.idleTimeout != null) {
+      idle_timeout = world.idleTimeout;
     }
     // lib.optionalAttrs (world.mode == "steam-direct") {
       game_port = world.gamePort;
@@ -30,14 +33,45 @@ let
 
   generatedSettings = {
     log_level = cfg.logLevel;
-    agent.backend = {
-      executable = "${cfg.serverDir}/valheim_server.x86_64";
-      save_dir = cfg.saveDir;
-      max_players = cfg.maxPlayers;
-      extra_args = cfg.extraServerArgs;
+    agent = {
+      state_dir = "${cfg.dataDir}/state";
+      backend = {
+        executable = "${cfg.serverDir}/valheim_server.x86_64";
+        save_dir = cfg.saveDir;
+        max_players = cfg.maxPlayers;
+        extra_args = cfg.extraServerArgs;
+      };
+      surface = {
+        socket_dir = "/run/naust";
+        metrics_host = cfg.metricsHost;
+        metrics_port = cfg.metricsPort;
+      };
     };
     worlds = lib.mapAttrsToList worldSettings cfg.worlds;
   };
+
+  # Sink secrets arrive as systemd credentials; the agent reads them by file.
+  # The list is handed over as JSON in the environment so the shared config
+  # file never contains a per-unit credential path.
+  sinkCredentials = lib.concatLists (
+    lib.imap0 (
+      i: sink:
+      [ "sink-${toString i}-url:${sink.urlFile}" ]
+      ++ lib.optional (sink.tokenFile != null) "sink-${toString i}-token:${sink.tokenFile}"
+    ) cfg.sinks
+  );
+  sinksJson = builtins.toJSON (
+    lib.imap0 (
+      i: sink:
+      {
+        inherit (sink) kind;
+        url_file = "\$CREDENTIALS_DIRECTORY/sink-${toString i}-url";
+      }
+      // lib.optionalAttrs (sink.tokenFile != null) {
+        token_file = "\$CREDENTIALS_DIRECTORY/sink-${toString i}-token";
+      }
+    ) cfg.sinks
+  );
 
   configDir = pkgs.writeTextDir "naust.toml" (
     builtins.readFile (tomlFormat.generate "naust.toml" cfg.resolvedSettings)
@@ -65,6 +99,11 @@ let
           NAUST_AGENT__BACKEND__PASSWORD="$(cat "$CREDENTIALS_DIRECTORY/password")"
           export NAUST_AGENT__BACKEND__PASSWORD
         fi
+        ${lib.optionalString (cfg.sinks != [ ]) ''
+          NAUST_AGENT__SINKS=${lib.escapeShellArg sinksJson}
+          NAUST_AGENT__SINKS="''${NAUST_AGENT__SINKS//\$CREDENTIALS_DIRECTORY/$CREDENTIALS_DIRECTORY}"
+          export NAUST_AGENT__SINKS
+        ''}
         exec ${lib.getExe steamRun} ${lib.getExe cfg.package} agent --world ${lib.escapeShellArg id}
       '';
       update = pkgs.writeShellScript "naust-${id}-update" ''
@@ -85,6 +124,10 @@ let
         fi
       '';
       hookWanted = cfg.onDrained != "none" || cfg.postDrainCommand != null;
+      preStart = pkgs.writeShellScript "naust-${id}-pre-start" ''
+        set -euo pipefail
+        ${cfg.preStartCommand}
+      '';
     in
     {
       description = "Naust world ${id} (${world.name})";
@@ -96,17 +139,25 @@ let
         NAUST_LOG_LEVEL = cfg.logLevel;
       };
       serviceConfig = {
-        Type = "exec";
+        # naust sends READY=1 when the game accepts players, STATUS with the
+        # player count, and extends the stop timeout while draining.
+        Type = "notify";
+        NotifyAccess = "main";
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = configDir;
-        ExecStartPre = lib.optional cfg.updateOnStart update;
+        RuntimeDirectory = "naust";
+        RuntimeDirectoryPreserve = true;
+        ExecStartPre =
+          lib.optional (cfg.preStartCommand != null) "+${preStart}" ++ lib.optional cfg.updateOnStart update;
         ExecStart = start;
         ExecStopPost = lib.optional hookWanted "+${afterDrain}";
-        LoadCredential = lib.optional (cfg.passwordFile != null) "password:${cfg.passwordFile}";
+        LoadCredential =
+          lib.optional (cfg.passwordFile != null) "password:${cfg.passwordFile}" ++ sinkCredentials;
         # naust drains the game on SIGTERM; give the whole sequence room.
         KillMode = "mixed";
         KillSignal = "SIGTERM";
+        TimeoutStartSec = cfg.startTimeout;
         TimeoutStopSec = cfg.stopTimeout;
         # Exit 1 means the world needs a human. Never loop on it.
         Restart = "no";
@@ -219,6 +270,79 @@ in
       '';
     };
 
+    startTimeout = lib.mkOption {
+      type = lib.types.int;
+      default = 600;
+      description = ''
+        Seconds systemd waits for READY=1. A fresh world generates its
+        locations on first start and can take several minutes.
+      '';
+    };
+
+    metricsHost = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1";
+      description = "Address of the read-only listener for metrics and probes.";
+    };
+
+    metricsPort = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = 9701;
+      description = ''
+        Port of the read-only listener serving `/metrics`, `/v1/status`,
+        `/readyz`, and `/healthz`. Commands are only accepted on
+        `/run/naust/<world>.sock`. `null` disables the listener.
+      '';
+    };
+
+    sinks = lib.mkOption {
+      default = [ ];
+      description = ''
+        Where lifecycle events go. A `webhook` sink receives CloudEvents; a
+        `discord` sink receives short messages such as the join code. URLs
+        and tokens are read from files at start through systemd credentials.
+      '';
+      example = lib.literalExpression ''
+        [
+          { kind = "discord"; urlFile = "/run/secrets/discord-webhook"; }
+          { kind = "webhook"; urlFile = "/run/secrets/worker-url"; tokenFile = "/run/secrets/worker-token"; }
+        ]
+      '';
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            kind = lib.mkOption {
+              type = lib.types.enum [
+                "webhook"
+                "discord"
+              ];
+              description = "`webhook` for CloudEvents JSON, `discord` for a Discord webhook.";
+            };
+            urlFile = lib.mkOption {
+              type = lib.types.path;
+              description = "File containing the sink URL.";
+            };
+            tokenFile = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = "File containing a bearer token for a webhook sink.";
+            };
+          };
+        }
+      );
+    };
+
+    preStartCommand = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/run/current-system/sw/bin/restic restore latest --target /";
+      description = ''
+        Shell command run as root before every start, before the steamcmd
+        update. The place for a restore from off-host storage. The agent
+        still refuses to start on a half-present or shrunken world.
+      '';
+    };
+
     onDrained = lib.mkOption {
       type = lib.types.enum [
         "none"
@@ -299,9 +423,13 @@ in
                 description = "Open the game and query ports for a steam-direct world.";
               };
               idleTimeout = lib.mkOption {
-                type = lib.types.str;
+                type = lib.types.nullOr lib.types.str;
                 default = "PT15M";
-                description = "ISO 8601 duration the world may be empty before it drains.";
+                description = ''
+                  ISO 8601 duration the world may be empty before it drains.
+                  `null` is orchestrator mode: the agent reports and obeys
+                  (SIGTERM, `POST /v1/drain`) but never drains on its own.
+                '';
               };
               connectionGracePeriod = lib.mkOption {
                 type = lib.types.str;

@@ -1,6 +1,7 @@
 """Shared fixtures: a capturing HTTP server and a short socket directory."""
 
 import asyncio
+import socket
 import tempfile
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
@@ -9,6 +10,21 @@ from typing import Any
 
 import pytest
 from aiohttp import web
+
+
+def _can_bind_loopback() -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", 0))
+    except OSError:
+        return False
+    return True
+
+
+NETWORK = _can_bind_loopback()
+requires_network = pytest.mark.skipif(
+    not NETWORK, reason="binding loopback sockets is not permitted here (build sandbox)"
+)
 
 
 @dataclass
@@ -26,6 +42,8 @@ class Capture:
 
 @pytest.fixture
 async def capture() -> AsyncIterator[Capture]:
+    if not NETWORK:
+        pytest.skip("binding loopback sockets is not permitted here (build sandbox)")
     state = Capture(url="")
 
     async def handle(request: web.Request) -> web.Response:
@@ -58,5 +76,5 @@ async def capture() -> AsyncIterator[Capture]:
 def socket_dir() -> Iterator[Path]:
     """Unix socket paths are limited to about 100 bytes; pytest's tmp_path is longer."""
 
-    with tempfile.TemporaryDirectory(prefix="naust-", dir="/tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="naust-") as directory:
         yield Path(directory)

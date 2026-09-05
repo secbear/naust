@@ -7,9 +7,10 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from conftest import requires_network
 from pydantic import SecretStr
 
-from naust.agent.config import AgentConfig, BackendLaunchConfig
+from naust.agent.config import AgentConfig, BackendLaunchConfig, SurfaceConfig
 from naust.agent.service import EXIT_FAILED, EXIT_OK, run_world
 from naust.agent.supervisor import BackendCommand, DrainPolicy
 from naust.domain.world import CrossplayWorldConfig, SteamDirectWorldConfig
@@ -32,6 +33,7 @@ def world(idle: float = 0.6, grace: float = 0.3) -> CrossplayWorldConfig:
 def config(tmp_path: Path) -> AgentConfig:
     return AgentConfig(
         state_dir=tmp_path / "state",
+        surface=SurfaceConfig(metrics_port=None),
         backend=BackendLaunchConfig(
             save_dir=tmp_path,
             ready_timeout=timedelta(seconds=10),
@@ -305,10 +307,11 @@ def test_unknown_game_is_an_error() -> None:
 # ---- the host contract, end to end -------------------------------------------
 
 
+@requires_network
 async def test_runtime_speaks_the_contract(tmp_path: Path, capture, socket_dir: Path) -> None:
     import aiohttp
 
-    from naust.agent.config import SinkConfig, SurfaceConfig
+    from naust.agent.config import SinkConfig
     from naust.agent.runtime import WorldRuntime
 
     w = world(idle=60, grace=60)

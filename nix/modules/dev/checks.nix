@@ -40,6 +40,18 @@
                   "1800"
                 ];
                 settings.agent.backend.save_timeout = "PT4M";
+                sinks = [
+                  {
+                    kind = "discord";
+                    urlFile = "/run/keys/discord-webhook";
+                  }
+                  {
+                    kind = "webhook";
+                    urlFile = "/run/keys/worker-url";
+                    tokenFile = "/run/keys/worker-token";
+                  }
+                ];
+                preStartCommand = "echo restore";
                 worlds.midgard = {
                   name = "Midgard";
                   idleTimeout = "PT30M";
@@ -50,6 +62,7 @@
                   gamePort = 2500;
                   openFirewall = true;
                   autoStart = false;
+                  idleTimeout = null;
                 };
               };
             }
@@ -65,14 +78,26 @@
         assert expect "unit runs as the naust user" (unit.serviceConfig.User == "naust");
         assert expect "unit never restarts on its own" (unit.serviceConfig.Restart == "no");
         assert expect "drain has room to finish" (unit.serviceConfig.TimeoutStopSec == 300);
-        assert expect "password is a systemd credential" (
-          unit.serviceConfig.LoadCredential == [ "password:/run/keys/valheim-password" ]
+        assert expect "password and sink secrets are systemd credentials" (
+          unit.serviceConfig.LoadCredential == [
+            "password:/run/keys/valheim-password"
+            "sink-0-url:/run/keys/discord-webhook"
+            "sink-1-url:/run/keys/worker-url"
+            "sink-1-token:/run/keys/worker-token"
+          ]
         );
+        assert expect "unit is notify-typed" (unit.serviceConfig.Type == "notify");
+        assert expect "socket directory is managed" (unit.serviceConfig.RuntimeDirectory == "naust");
+        assert expect "pre-start hook runs as root before the update" (
+          builtins.length unit.serviceConfig.ExecStartPre == 2
+          && lib.hasPrefix "+" (builtins.head unit.serviceConfig.ExecStartPre)
+        );
+        assert expect "surface is configured" (
+          settings.agent.surface.socket_dir == "/run/naust" && settings.agent.surface.metrics_port == 9701
+        );
+        assert expect "orchestrator mode omits the idle timeout" (!(worlds.asgard ? idle_timeout));
         assert expect "poweroff hook runs as root" (
           lib.any (s: lib.hasPrefix "+" s) unit.serviceConfig.ExecStopPost
-        );
-        assert expect "steamcmd update runs before start" (
-          builtins.length unit.serviceConfig.ExecStartPre == 1
         );
         assert expect "world starts at boot" (unit.wantedBy == [ "multi-user.target" ]);
         assert expect "manual world does not start at boot" (
