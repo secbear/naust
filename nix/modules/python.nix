@@ -23,7 +23,12 @@
               workspaceOverlay
             ]
           );
-      runtimeEnv = pythonSet.mkVirtualEnv "naust-env" workspace.deps.default;
+      runtimeEnv = (pythonSet.mkVirtualEnv "naust-env" workspace.deps.default).overrideAttrs (old: {
+        meta = (old.meta or { }) // {
+          description = "Scale-to-zero supervision for game servers";
+          mainProgram = "naust";
+        };
+      });
       checkEnv = pythonSet.mkVirtualEnv "naust-check-env" workspace.deps.all;
       editablePythonSet = pythonSet.overrideScope editableOverlay;
       developmentEnv = editablePythonSet.mkVirtualEnv "naust-dev-env" workspace.deps.all;
