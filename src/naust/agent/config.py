@@ -35,4 +35,5 @@ class AgentConfig(BaseModel):
 
     control_url: HttpUrl = HttpUrl("http://127.0.0.1:8000")
     backend: BackendLaunchConfig = Field(default_factory=BackendLaunchConfig)
+    state_dir: Path = Path("/var/lib/naust/state")
     idle_check_interval: PositiveDuration = timedelta(seconds=5)

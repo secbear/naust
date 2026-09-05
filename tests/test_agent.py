@@ -31,6 +31,7 @@ def world(idle: float = 0.6, grace: float = 0.3) -> CrossplayWorldConfig:
 
 def config(tmp_path: Path) -> AgentConfig:
     return AgentConfig(
+        state_dir=tmp_path / "state",
         backend=BackendLaunchConfig(
             save_dir=tmp_path,
             ready_timeout=timedelta(seconds=10),
@@ -77,6 +78,27 @@ async def test_empty_world_drains_on_idle_timeout(tmp_path: Path) -> None:
     assert code == EXIT_OK
     for path in files.paths:
         assert path.stat().st_size > 0
+    marker = tmp_path / "state" / "testworld" / "last-verified.json"
+    assert marker.exists()
+
+
+async def test_half_present_world_is_refused_before_start(tmp_path: Path) -> None:
+    w = world()
+    files = valheim.save_files(w, config(tmp_path).backend)
+    files.paths[0].parent.mkdir(parents=True)
+    files.paths[0].write_bytes(b"only the db")
+
+    code = await run_world(
+        w,
+        config(tmp_path),
+        profile=FAST_PROFILE,
+        command=fake(tmp_path),
+        files=files,
+        policy=policy(),
+    )
+
+    assert code == EXIT_FAILED
+    assert not files.paths[1].exists(), "nothing was started, nothing was written"
 
 
 async def test_operator_stop_drains_immediately(tmp_path: Path) -> None:

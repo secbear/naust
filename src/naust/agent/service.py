@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import structlog
 
 from naust.agent.config import AgentConfig
+from naust.agent.files import marker_path, preflight, write_marker
 from naust.agent.presence import PresenceTracker, PresenceTransition
 from naust.agent.supervisor import (
     BackendCommand,
@@ -117,6 +118,12 @@ async def _supervise(
     stop: asyncio.Event,
     log: structlog.stdlib.BoundLogger,
 ) -> int:
+    marker = marker_path(config.state_dir, world.id)
+    problem = preflight(supervisor.save_files, marker)
+    if problem is not None:
+        log.error("backend.refused", reason=problem, marker=str(marker))
+        return EXIT_FAILED
+
     log.info("backend.starting", argv=_redacted(supervisor.command.argv))
     await supervisor.start()
     try:
@@ -164,6 +171,8 @@ async def _supervise(
 
     log.info("drain.starting", players=sorted(supervisor.tracker.snapshot.players))
     report = await supervisor.drain()
+    if report.succeeded:
+        write_marker(supervisor.save_files, marker)
     event = log.info if report.succeeded else log.error
     event(
         "drain.finished",
