@@ -81,17 +81,17 @@ A game is described by a **profile** (declarative) and an **adapter** (code).
 GameProfile(
     name="valheim",
     steam_app_id=896660,
-    launch=ValheimLaunch,            # world + launch config -> argv, cwd, env
-    files=ValheimFiles,              # world -> the files that travel together
+    launch=ValheimLaunch,  # world + launch config -> argv, cwd, env
+    files=ValheimFiles,  # world -> the files that travel together
     save=SaveMethod.signal(SIGINT),  # or SaveMethod.command("save-all") over rcon
-    join=JoinKind.CODE,              # or JoinKind.ADDRESS
+    join=JoinKind.CODE,  # or JoinKind.ADDRESS
     capabilities=Capabilities(
-        presence="inferred",         # exact | inferred | count-only | none
-        identity="name",             # stable-id | name | none
-        save="signal",               # signal | command | autosave-only
-        join="code",                 # code | address
-        query=None,                  # a2s | minecraft-slp | None
-        version="log",               # log | query | none
+        presence="inferred",  # exact | inferred | count-only | none
+        identity="name",  # stable-id | name | none
+        save="signal",  # signal | command | autosave-only
+        join="code",  # code | address
+        query=None,  # a2s | minecraft-slp | None
+        version="log",  # log | query | none
     ),
 )
 ```
