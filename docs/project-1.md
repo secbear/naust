@@ -1,5 +1,14 @@
 # Project 1 guided build: presence from a noisy log
 
+> **Note (September 2026).** The implementation went one step further than
+> this guide describes: the stateful correlation of Valheim's disconnect
+> sequence lives in a game-specific *resolver*
+> (`naust.games.valheim.resolver`), and the generic tracker consumes only
+> `PlayerJoined`, `PlayerLeft`, and `PlayerCount`. The reasoning is in
+> [ADR 0004](decisions/0004-agent-contract-and-game-boundary.md) and
+> [docs/architecture.md](architecture.md). The guide's questions and evidence
+> still apply; read "tracker" below as "resolver plus tracker".
+
 This is the learning companion for [Project 1 — Presence](../README.md#project-1).
 The README remains the product specification. This article supplies the order of
 work, the questions to ask, and the evidence to test against. It deliberately

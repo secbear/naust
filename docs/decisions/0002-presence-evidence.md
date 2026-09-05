@@ -1,6 +1,8 @@
 # Presence evidence and the fail-awake policy
 
-Status: accepted for Project 1. Revisit at the points named below.
+Status: accepted for Project 1; amended by ADR 0004, which moves the
+disconnect correlation from the generic tracker into Valheim's resolver. The
+rules below are unchanged; only their home moved.
 
 ## Question
 

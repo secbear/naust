@@ -11,9 +11,12 @@ provides the same formatter, linter, and test entry points used outside Nix.
   development environment points to the live checkout.
 - `modules/nixos.nix` exports `nixosModules.naust` with this flake's package
   as the default `services.naust.package`.
-- `nixos/naust.nix` is the NixOS module: one systemd unit per world, steamcmd
-  update, Steam FHS runtime with the PlayFab libraries, drain on stop, optional
-  poweroff after a verified drain. Usage is in `docs/nixos.md`.
+- `nixos/naust.nix` is the NixOS module: one `Type=notify` unit per world,
+  steamcmd update, Steam FHS runtime with the PlayFab libraries, event sinks
+  fed through systemd credentials, a unix socket for commands under
+  `/run/naust`, a localhost metrics port, drain on stop, optional pre-start
+  and post-drain hooks, optional poweroff after a verified drain. Usage is in
+  `docs/nixos.md`; the contract it exposes is in `docs/architecture.md`.
 - `modules/dev/shells.nix` defines `nix develop`.
 - `modules/dev/checks.nix` defines `nix flake check`: the Python gate, and an
   evaluation-only NixOS configuration that asserts the module's generated

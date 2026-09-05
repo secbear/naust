@@ -11,6 +11,27 @@ bind_port = 8000
 
 [agent]
 control_url = "http://127.0.0.1:8000"
+state_dir = "/var/lib/naust/state"
+
+[agent.backend]
+# executable = "/var/lib/naust/server/valheim_server.x86_64"
+save_dir = "/var/lib/naust/worlds"
+max_players = 10
+# password comes from NAUST_AGENT__BACKEND__PASSWORD or a systemd credential
+
+[agent.surface]
+# socket_dir = "/run/naust"      # commands: POST /v1/drain on <socket_dir>/<world>.sock
+metrics_host = "127.0.0.1"
+metrics_port = 9701              # read-only: /metrics /v1/status /readyz /healthz
+
+# [[agent.sinks]]
+# kind = "discord"
+# url_file = "/run/secrets/discord-webhook"
+#
+# [[agent.sinks]]
+# kind = "webhook"
+# url_file = "/run/secrets/events-url"
+# token_file = "/run/secrets/events-token"
 
 [gateway]
 bind_host = "0.0.0.0"
@@ -20,6 +41,7 @@ control_url = "http://127.0.0.1:8000"
 id = "midgard"
 name = "Midgard"
 owner = "friends-of-midgard"
+game = "valheim"
 mode = "steam-direct"
 game_port = 2456
 bepinex_enabled = false
@@ -37,7 +59,7 @@ id = "yggdrasil"
 name = "Yggdrasil"
 owner = "friends-of-yggdrasil"
 mode = "crossplay"
-idle_timeout = "PT15M"
+# idle_timeout omitted or null = orchestrator mode: the agent never drains on its own
 connection_grace_period = "PT3M"
 
 [worlds.resources]

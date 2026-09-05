@@ -8,20 +8,23 @@ A design specification and a staged build guide.
 
 ## Status
 
-Projects 0 through 2 are implemented and tested: configuration and domain
-vocabulary, the Valheim log adapter and presence tracker, and the supervisor
-that launches a backend, tracks presence, and drains it with a verified save.
+The agent is built and tested: configuration and domain vocabulary; a
+Valheim observer, resolver, and profile behind a game-neutral boundary; the
+supervisor that launches a backend, tracks presence, and drains it with a
+verified save; and the host contract from
+[docs/architecture.md](docs/architecture.md): a status document with
+conditions, CloudEvents to webhook and Discord sinks, a unix-socket command
+surface, Prometheus metrics, sd_notify, and exit-status semantics.
 `naust parse <logfile>` replays a capture; `naust agent --world <id>` runs a
 world. A NixOS module runs worlds as systemd units on one host and can power
-the host off after a clean drain — see [docs/nixos.md](docs/nixos.md). Design
+the host off after a clean drain, see [docs/nixos.md](docs/nixos.md). Design
 decisions live in [docs/decisions/](docs/decisions/).
 
-[docs/architecture.md](docs/architecture.md) is the target design: the agent
-as an Agones-style sidecar for games that cannot integrate an SDK, with a
-versioned contract (status, CloudEvents, commands, metrics, exit status) at
-the host boundary so any orchestrator can be built on top later. The gateway,
-Control, object-store persistence, Discord bot, and Kubernetes projects below
-are optional substrates above that contract and are not built.
+The gateway, Control, object-store persistence, a Discord bot, and the
+Kubernetes projects below are optional substrates above that contract and are
+not built. Nothing in this repository has yet been run against a real
+dedicated server on Linux; the first crossplay capture is the next piece of
+evidence.
 
 ## How to use this document
 

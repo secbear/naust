@@ -6,9 +6,10 @@ those facts for games that will never make the call, and exposes them through
 the same kind of contract, so anything from a systemd unit to a Kubernetes
 operator can make lifecycle decisions on top.
 
-This document is the target design. The [status section of the
-README](../README.md#status) says how much of it exists; the decision records
-in [`docs/decisions/`](decisions/) say why each piece looks the way it does.
+This document is the design as built. The [status section of the
+README](../README.md#status) says what has and has not been exercised on a
+real host; the decision records in [`docs/decisions/`](decisions/) say why
+each piece looks the way it does.
 
 ## The one rule
 
@@ -237,10 +238,10 @@ consumer of events and status and lives outside.
 
 | Substrate | Wake | Drain | Sleep cost | Status |
 | --- | --- | --- | --- | --- |
-| NixOS module, on-demand VM | cloud API starts the host; `autoStart` starts the unit | idle policy, exit 0, `postDrainCommand`, `onDrained = "poweroff"` | one disk | built |
-| NixOS module, always-on host | `systemctl start` from any trigger | same | zero | built |
-| Container image | orchestrator starts the container; agent is PID 1 | SIGTERM; exit code drives restart policy | none | planned, thin |
-| Kubernetes pod | Deployment 0→1 by an autoscaler or operator | SIGTERM with `terminationGracePeriodSeconds` above the drain budget; probes hit `/readyz` | none | not built; the contract is designed for it |
+| NixOS module, on-demand VM | cloud API starts the host; `autoStart` starts the unit | idle policy, exit 0, `postDrainCommand`, `onDrained = "poweroff"` | one disk | built, not yet run on a real host |
+| NixOS module, always-on host | `systemctl start` from any trigger | same | zero | built, not yet run on a real host |
+| Container image | orchestrator starts the container; agent is PID 1 | SIGTERM; exit code drives restart policy | none | not built; thin when needed |
+| Kubernetes pod | Deployment 0→1 by an autoscaler or operator | SIGTERM with `terminationGracePeriodSeconds` above the drain budget; probes hit `/readyz` on the TCP listener | none | not built; the contract is designed for it |
 
 The Steam-direct gateway (wake on an incoming packet, A2S status in the server
 browser) is a separate always-on component that speaks the same events. It is
@@ -279,9 +280,9 @@ asked for.
 - **CloudEvents**, **Kubernetes probes**, **sd_notify**: existing shapes for
   the surfaces instead of new ones.
 
-## Migration from the current code
+## Migration from the earlier code
 
-In order, each a small change with the tests kept green:
+Done, in this order, each a small change with the tests kept green:
 
 1. Split Valheim's disconnect correlation out of `PresenceTracker` into
    `games/valheim/resolver.py`; the tracker consumes `PlayerJoined`,
