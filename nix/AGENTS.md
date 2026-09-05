@@ -9,8 +9,15 @@ provides the same formatter, linter, and test entry points used outside Nix.
 - `modules/python.nix` translates `uv.lock` into runtime and development
   environments with uv2nix. The package and checks use immutable source; the
   development environment points to the live checkout.
+- `modules/nixos.nix` exports `nixosModules.naust` with this flake's package
+  as the default `services.naust.package`.
+- `nixos/naust.nix` is the NixOS module: one systemd unit per world, steamcmd
+  update, Steam FHS runtime with the PlayFab libraries, drain on stop, optional
+  poweroff after a verified drain. Usage is in `docs/nixos.md`.
 - `modules/dev/shells.nix` defines `nix develop`.
-- `modules/dev/checks.nix` defines the Python portion of `nix flake check`.
+- `modules/dev/checks.nix` defines `nix flake check`: the Python gate, and an
+  evaluation-only NixOS configuration that asserts the module's generated
+  units and settings on every platform.
 - `modules/dev/treefmt.nix` defines `nix fmt`.
 
 ## Commands
@@ -32,7 +39,10 @@ nix flake check
 - `.github/workflows/ci.yml` owns hosted CI. Flake checks mirror its Python gates
   for people and systems that use Nix.
 - Add container, Kubernetes, or deployment tooling only when a project phase
-  actually introduces and tests it.
+  actually introduces and tests it. The NixOS module is the single-node
+  deployment introduced with Project 2 (ADR 0003).
+- The module cannot be run on macOS or aarch64; keep the evaluation check
+  honest and test real behaviour on an x86_64-linux host.
 - Keep module imports explicit. At this repository's size, auto-discovery hides
   more than it helps.
 - Update `flake.lock` intentionally and review input changes.

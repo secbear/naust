@@ -46,6 +46,7 @@
       imports = [
         inputs.treefmt-nix.flakeModule
         ./nix/modules/python.nix
+        ./nix/modules/nixos.nix
         ./nix/modules/dev/checks.nix
         ./nix/modules/dev/shells.nix
         ./nix/modules/dev/treefmt.nix
