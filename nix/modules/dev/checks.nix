@@ -118,6 +118,11 @@
             2501
           ]
         );
+        # Forcing the unit text proves no import-from-derivation hides in the
+        # module: it must evaluate on every platform without building.
+        assert expect "unit text evaluates without building" (
+          builtins.isString c.systemd.units."naust-midgard.service".text
+        );
         true;
     in
     {
