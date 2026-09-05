@@ -1,5 +1,6 @@
 """Human-facing Typer CLI and composition boundary for Naust."""
 
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
@@ -16,7 +17,7 @@ from naust.agent.observations import (
 )
 from naust.agent.presence import PresenceTracker
 from naust.agent.replay import ReplayEvent, replay
-from naust.agent.service import run_agent
+from naust.agent.service import run_agent, run_world
 from naust.agent.valheim import ValheimAdapter
 from naust.control.service import run_control
 from naust.gateway.service import run_gateway
@@ -72,16 +73,38 @@ def _start_component[ComponentConfig: BaseModel](
 @app.command()
 def agent(
     ctx: typer.Context,
+    world: Annotated[
+        str | None,
+        typer.Option("--world", help="Supervise this configured world until it drains."),
+    ] = None,
     control_url: Annotated[
         str | None,
         typer.Option("--control-url", help="Override Control's HTTP URL."),
     ] = None,
 ) -> None:
-    """Start the per-backend Agent stub."""
+    """Start the per-backend Agent.
+
+    With --world, launch that world's backend, track presence, and drain it
+    on idle timeout, SIGTERM, or SIGINT. Exit status 0 means the world was
+    saved, verified, and stopped; 1 means it needs a human.
+    """
 
     override = {} if control_url is None else {"control_url": control_url}
     settings = _load_settings(ctx, agent=override) if override else _load_settings(ctx)
-    _start_component("agent", settings, settings.agent, run_agent)
+    if world is None:
+        _start_component("agent", settings, settings.agent, run_agent)
+        return
+    selected = next((w for w in settings.worlds if w.id == world), None)
+    if selected is None:
+        known = ", ".join(w.id for w in settings.worlds) or "none"
+        raise typer.BadParameter(f"unknown world {world!r}; configured worlds: {known}")
+    if settings.agent.backend.executable is None:
+        raise typer.BadParameter("agent.backend.executable is required to run a world")
+    setup_logging(settings.log_level)
+    structlog.get_logger("naust").info(
+        "component.starting", component="agent", world=world, config=settings.resolved_config()
+    )
+    raise typer.Exit(code=asyncio.run(run_world(selected, settings.agent)))
 
 
 @app.command()

@@ -158,3 +158,18 @@ def test_parse_reports_joins_beyond_max_players(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "present: 1 [Alice]" in result.output
     assert "1 join(s) exceeded --max-players 1" in result.output
+
+
+def test_agent_world_must_be_configured(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "naust.toml").write_text(
+        '[[worlds]]\nid = "midgard"\nname = "Midgard"\nowner = "x"\nmode = "crossplay"\n'
+    )
+    monkeypatch.chdir(tmp_path)
+
+    unknown = runner.invoke(app, ["agent", "--world", "asgard"])
+    no_executable = runner.invoke(app, ["agent", "--world", "midgard"])
+
+    assert unknown.exit_code == 2
+    assert "midgard" in unknown.output
+    assert no_executable.exit_code == 2
+    assert "executable" in no_executable.output

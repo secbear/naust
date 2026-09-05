@@ -81,3 +81,12 @@ def test_registry_rejects_overlapping_public_ports() -> None:
 
     with pytest.raises(ValidationError, match="public port 2457"):
         NaustSettings(worlds=worlds)
+
+
+def test_backend_password_is_removed_from_resolved_config(monkeypatch) -> None:
+    monkeypatch.setenv("NAUST_AGENT__BACKEND__PASSWORD", "hunter22")
+
+    resolved = NaustSettings().resolved_config()
+
+    assert "password" not in resolved["agent"]["backend"]
+    assert "hunter22" not in str(resolved)

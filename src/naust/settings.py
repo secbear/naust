@@ -84,5 +84,8 @@ class NaustSettings(BaseSettings):
 
         return self.model_dump(
             mode="json",
-            exclude={"storage": {"access_key", "secret_key"}},
+            exclude={
+                "storage": {"access_key", "secret_key"},
+                "agent": {"backend": {"password"}},
+            },
         )

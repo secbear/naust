@@ -1,15 +1,21 @@
-"""Valheim dedicated-server log adapter.
+"""Everything Naust knows about the Valheim dedicated server.
 
-Every pattern here is an observation of a specific server build, not an API.
-The recorded evidence is ``tests/fixtures/valheim/presence-session.log``
-(server engine 6000.0.61f1, network version 36). Re-verify each pattern
-against a fresh capture whenever the game updates.
+Two things live here because they change for the same reason — Iron Gate
+shipping a new build: the log grammar the adapter recognises, and the way the
+server is launched and where it keeps its files.
+
+Every pattern is an observation of a specific server build, not an API. The
+recorded evidence is ``tests/fixtures/valheim/presence-session.log`` (server
+engine 6000.0.61f1, network version 36). Re-verify each pattern against a
+fresh capture whenever the game updates.
 """
 
+import os
 import re
 from dataclasses import dataclass
 from typing import Final
 
+from naust.agent.config import BackendLaunchConfig
 from naust.agent.observations import (
     AbandonedZdoObserved,
     CharacterObserved,
@@ -21,6 +27,8 @@ from naust.agent.observations import (
     WorldSavedObserved,
     ZdoId,
 )
+from naust.agent.supervisor import BackendCommand, DrainPolicy, SaveFiles
+from naust.domain.world import CrossplayWorldConfig, SteamDirectWorldConfig, WorldConfig
 
 # ``01/01/2026 23:07:32: `` — the server prefixes most, but not all, lines with a
 # local timestamp. The message is what carries meaning; the timestamp is
@@ -89,3 +97,64 @@ class ValheimAdapter:
         if match := _JOIN_CODE.search(message):
             return JoinCodeObserved(code=match["code"])
         return None
+
+
+# ---- launching -------------------------------------------------------------
+
+STEAM_APP_ID: Final = "892970"
+"""The game's app id, which the stock start_server.sh exports as SteamAppId."""
+
+
+def build_command(world: WorldConfig, launch: BackendLaunchConfig) -> BackendCommand:
+    """The argv, cwd, and environment the stock ``start_server.sh`` would use.
+
+    The server is run from its own directory with ``linux64`` on the library
+    path, exactly as Iron Gate's script does. ``-savedir`` pins the world files
+    under ``launch.save_dir`` so the supervisor knows what to verify.
+    """
+
+    if launch.executable is None:
+        raise ValueError("agent.backend.executable is required to run a world")
+    executable = launch.executable.expanduser().resolve()
+    argv: list[str] = [
+        str(executable),
+        "-nographics",
+        "-batchmode",
+        "-name",
+        world.name,
+        "-world",
+        world.id,
+        "-savedir",
+        str(launch.save_dir),
+    ]
+    if launch.password is not None:
+        argv += ["-password", launch.password.get_secret_value()]
+    match world:
+        case SteamDirectWorldConfig(game_port=game_port):
+            argv += ["-port", str(game_port), "-public", "0"]
+        case CrossplayWorldConfig():
+            argv += ["-crossplay"]
+    argv += list(launch.extra_args)
+
+    server_dir = executable.parent
+    library_path = str(server_dir / "linux64")
+    if existing := os.environ.get("LD_LIBRARY_PATH"):
+        library_path = f"{library_path}:{existing}"
+    env = {**os.environ, "SteamAppId": STEAM_APP_ID, "LD_LIBRARY_PATH": library_path}
+    return BackendCommand(argv=tuple(argv), cwd=server_dir, env=env)
+
+
+def save_files(world: WorldConfig, launch: BackendLaunchConfig) -> SaveFiles:
+    """The ``.db`` and ``.fwl`` pair that must travel together."""
+
+    worlds = launch.save_dir / "worlds_local"
+    return SaveFiles((worlds / f"{world.id}.db", worlds / f"{world.id}.fwl"))
+
+
+def drain_policy(launch: BackendLaunchConfig) -> DrainPolicy:
+    return DrainPolicy(
+        save_timeout=launch.save_timeout,
+        exit_grace=launch.exit_grace,
+        stop_timeout=launch.stop_timeout,
+        kill_timeout=launch.kill_timeout,
+    )
