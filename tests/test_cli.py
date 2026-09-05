@@ -85,7 +85,7 @@ def test_parse_replays_the_recorded_fixture() -> None:
     assert result.exit_code == 0, result.output
     lines = result.output.splitlines()
     presence = [
-        line.split(maxsplit=1)[1] for line in lines if "  join " in line or "  leave " in line
+        line.split(maxsplit=2)[2] for line in lines if "  join " in line or "  leave " in line
     ]
     assert presence == [
         "join  PLAYER_A -> PLAYER_A",
