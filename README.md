@@ -35,20 +35,8 @@ product requirements it implements.
 | Part                                                     | Purpose                                                                              | Use it when                                                          |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | [Part I — Product specification](#product-specification) | Defines observable behavior, invariants, failure handling, and component boundaries. | You need to know what the system must do.                            |
-| [Part II — Build guide](#build-guide)                    | Orders the learning and implementation work into Building Block → Project pairs.     | You are working through the curriculum.                              |
-| [Part III — Reference](#reference)                       | Collects libraries, Kubernetes concepts, further reading, and the schedule.          | You need to look something up without interrupting the project flow. |
-
-### A note on language
-
-This guide is written for Python. Rust would be the better production choice for
-the gateway — it sits in a UDP hot path and wants to run in under 20 MB — and
-the intended end state is a Python control plane with a Rust gateway. But you
-are here to build Python fluency, and the correct order is: make it work in
-Python, measure it, _then_ port the one component where the measurement
-justifies it. A port you can justify with a flamegraph is a better story than a
-language choice you made up front.
-
-Where a design decision would differ in Rust, there is an **Aside** noting it.
+| [Part II — Roadmap](#build-guide)                        | Orders the implementation into staged projects, each tied to the requirements it implements. | You are building or extending a component.                           |
+| [Part III — Reference](#reference)                       | Collects libraries, Kubernetes concepts, and further reading.                        | You need to look something up.                                       |
 
 ---
 
@@ -617,36 +605,31 @@ Say no to all of these. They are how the project doesn't ship.
 
 <a id="build-guide"></a>
 
-# Part II — Build Guide
+# Part II — Roadmap
 
-Eleven staged projects — Project 0 plus Projects 1–10 — in three phases. Phase A
-produces something people can use. Phase B makes it durable and reachable. Phase
-C makes it Kubernetes-native, which is the phase you write about.
-
-**Scheduling reality.** Valheim 1.0 lands September 9, 2026. Phase A is the
-September deliverable. Phase B follows in weeks. Phase C is October and is the
-one that matters for interviews — it does not need to be done for the launch
-window, and rushing it produces worse writing.
+Eleven staged projects, Project 0 plus Projects 1–10, in three phases. Phase A
+produces something people can use on one host. Phase B makes it durable and
+reachable. Phase C makes it Kubernetes-native. Projects 0 through 2 are built;
+the rest are optional substrates above the agent contract described in
+[docs/architecture.md](docs/architecture.md).
 
 ## Build map
 
-Use this as the table of contents for the curriculum. “Product sources” are the
-behavioral requirements to have open while doing the project; the preceding
-Building Block supplies the implementation knowledge.
+“Product sources” are the behavioral requirements each project implements.
 
-| Project                              | Prepare with                            | Product sources                                                                                                                                                                                                | Result                                     |
-| ------------------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| [0 — Skeleton](#project-0)           | [BB-0 — Python tooling](#bb-0)          | [Vocabulary](#spec-2), [networking modes](#spec-3), [lifecycle](#spec-4), [component boundaries](#spec-5), [sleep timing](#spec-6-2), [gateway ports](#spec-6-5), [persistence](#spec-6-6), [gotchas](#spec-8) | Stable configuration and domain vocabulary |
-| [1 — Presence](#project-1)           | [BB-1 — Text, state, streams](#bb-1)    | [Agent boundary](#spec-5-agent), [presence behavior](#spec-6-1)                                                                                                                                                | Pure parser and presence tracker           |
-| [2 — Supervisor](#project-2)         | [BB-2 — Processes and async](#bb-2)     | [Lifecycle](#spec-4), [Agent boundary](#spec-5-agent), [drain contract](#spec-6-3), [edge cases](#spec-7)                                                                                                      | Safe backend supervision and draining      |
-| [3 — Gateway](#project-3)            | [BB-3 — UDP and protocols](#bb-3)       | [Networking constraint](#spec-3), [Gateway boundary](#spec-5-gateway), [gateway behavior](#spec-6-5), [gotchas](#spec-8)                                                                                       | UDP activation, A2S, and forwarding        |
-| [4 — Control](#project-4)            | [BB-4 — Services and APIs](#bb-4)       | [Lifecycle](#spec-4), [Control boundary](#spec-5-control), [idle behavior](#spec-6-2), [wake contract](#spec-6-4), [edge cases](#spec-7)                                                                       | Working single-node v0.1                   |
-| [5 — Persistence](#project-5)        | [BB-5 — Storage and measurement](#bb-5) | [Drain](#spec-6-3), [wake](#spec-6-4), [persistence](#spec-6-6)                                                                                                                                                | Durable saves and measured cold starts     |
-| [6 — Discord](#project-6)            | [BB-6 — Discord](#bb-6)                 | [Networking modes](#spec-3), [Agent boundary](#spec-5-agent), [wake](#spec-6-4), [edge cases](#spec-7)                                                                                                         | Viable crossplay wake and code delivery    |
-| [7 — Kubernetes by hand](#project-7) | [BB-7 — Kubernetes fundamentals](#bb-7) | [Components](#spec-5), [drain](#spec-6-3), [persistence](#spec-6-6), [gotchas](#spec-8)                                                                                                                        | Manual Kubernetes deployment               |
-| [8 — Operator](#project-8)           | [BB-8 — Extending Kubernetes](#bb-8)    | [Vocabulary](#spec-2), [lifecycle](#spec-4), [components](#spec-5), [edge cases](#spec-7)                                                                                                                      | Declarative `World` API and controller     |
-| [9 — KEDA scaler](#project-9)        | [BB-9 — Autoscaling and gRPC](#bb-9)    | [Idle behavior](#spec-6-2), [Gateway boundary](#spec-5-gateway), [Control boundary](#spec-5-control)                                                                                                           | Push-driven 0↔1 scaling                    |
-| [10 — Observability](#project-10)    | All previous projects                   | [Full product specification](#product-specification)                                                                                                                                                           | Measurements, dashboard, and writeup       |
+| Project                              | Product sources                                                                                                                                                                                                | Result                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [0 — Skeleton](#project-0)           | [Vocabulary](#spec-2), [networking modes](#spec-3), [lifecycle](#spec-4), [component boundaries](#spec-5), [sleep timing](#spec-6-2), [gateway ports](#spec-6-5), [persistence](#spec-6-6), [gotchas](#spec-8) | Stable configuration and domain vocabulary |
+| [1 — Presence](#project-1)           | [Agent boundary](#spec-5-agent), [presence behavior](#spec-6-1)                                                                                                                                                | Pure parser and presence tracker           |
+| [2 — Supervisor](#project-2)         | [Lifecycle](#spec-4), [Agent boundary](#spec-5-agent), [drain contract](#spec-6-3), [edge cases](#spec-7)                                                                                                      | Safe backend supervision and draining      |
+| [3 — Gateway](#project-3)            | [Networking constraint](#spec-3), [Gateway boundary](#spec-5-gateway), [gateway behavior](#spec-6-5), [gotchas](#spec-8)                                                                                       | UDP activation, A2S, and forwarding        |
+| [4 — Control](#project-4)            | [Lifecycle](#spec-4), [Control boundary](#spec-5-control), [idle behavior](#spec-6-2), [wake contract](#spec-6-4), [edge cases](#spec-7)                                                                       | Working single-node v0.1                   |
+| [5 — Persistence](#project-5)        | [Drain](#spec-6-3), [wake](#spec-6-4), [persistence](#spec-6-6)                                                                                                                                                | Durable saves and measured cold starts     |
+| [6 — Discord](#project-6)            | [Networking modes](#spec-3), [Agent boundary](#spec-5-agent), [wake](#spec-6-4), [edge cases](#spec-7)                                                                                                         | Viable crossplay wake and code delivery    |
+| [7 — Kubernetes by hand](#project-7) | [Components](#spec-5), [drain](#spec-6-3), [persistence](#spec-6-6), [gotchas](#spec-8)                                                                                                                        | Manual Kubernetes deployment               |
+| [8 — Operator](#project-8)           | [Vocabulary](#spec-2), [lifecycle](#spec-4), [components](#spec-5), [edge cases](#spec-7)                                                                                                                      | Declarative `World` API and controller     |
+| [9 — KEDA scaler](#project-9)        | [Idle behavior](#spec-6-2), [Gateway boundary](#spec-5-gateway), [Control boundary](#spec-5-control)                                                                                                           | Push-driven 0↔1 scaling                    |
+| [10 — Observability](#project-10)    | [Full product specification](#product-specification)                                                                                                                                                           | Measurements and dashboard |
 
 ## Design discipline used throughout
 
@@ -677,7 +660,7 @@ between project notes:
 | Artifact                                              | Recommended home                                       | Rule                                                                                               |
 | ----------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | Product behavior and safety requirements              | Part I of this README                                  | Edit the source requirement; link to it elsewhere instead of paraphrasing it into a second spec.   |
-| Curriculum and acceptance criteria                    | Part II of this README                                 | Keep each requirement beside the project that first implements it.                                 |
+| Roadmap and acceptance criteria                       | Part II of this README                                 | Keep each requirement beside the project that first implements it.                                 |
 | Architecture decisions                                | `docs/decisions/`                                      | One short record per consequential decision; link the requirement and state the revisit condition. |
 | Captured logs, packet traces, and experiment metadata | `docs/evidence/` or a documented fixture directory     | Record version and reproduction context; redact secrets and player data.                           |
 | Measurements and conclusions                          | The project-specific document named by its deliverable | Keep raw method and conditions beside the result, not only the headline number.                    |
@@ -704,92 +687,12 @@ handles are different kinds of state even when all four mention the same world.
 
 ---
 
-<a id="bb-0"></a>
-
-## Building Blocks 0 — Modern Python tooling
-
-_Put your other projects and concerns aside. Take a breath and relax. Here are
-some resources to explore. Read all the readings and perform all the exercises._
-
-You know Python the language. You do not yet know the 2026 toolchain. This
-section is entirely about the tools you will use in every project after it.
-
-**Reading: [uv](https://docs.astral.sh/uv/).** The package and project manager
-that has replaced pip, virtualenv, pip-tools, and pyenv for most new work. Read
-_Getting started_ and _Projects_. Pay attention to `uv init`, `uv add`,
-`uv run`, and the lockfile.
-
-**Reading: [Ruff](https://docs.astral.sh/ruff/).** Linter and formatter in one,
-fast enough to run on save. Read the _Configuration_ page and skim the _Rules_
-index to see what it can catch.
-
-**Reading:
-[pytest — Getting Started](https://docs.pytest.org/en/stable/getting-started.html)
-and [Fixtures](https://docs.pytest.org/en/stable/explanation/fixtures.html).**
-Fixtures are the concept that distinguishes pytest from unittest. Understand
-them before you need them.
-
-**Reading:
-[Pydantic v2 — Concepts](https://docs.pydantic.dev/latest/concepts/models/).**
-Data validation via type annotations. Read _Models_, _Fields_, and _Validators_.
-Then read
-[Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/),
-which is how every configuration surface in this project will be defined.
-
-**Reading: [Typer](https://typer.tiangolo.com/).** CLI framework built on type
-hints. Read the tutorial's first three pages.
-
-**Reading:
-[structlog — Why structured logging](https://www.structlog.org/en/stable/why.html).**
-Then skim the configuration docs. You will want machine-parseable logs from day
-one, because in Phase C you will be grepping them out of a cluster.
-
-**Exercise: project skeleton.** `uv init naust`. Add ruff, pytest, pydantic,
-typer, structlog. Configure ruff in `pyproject.toml` with a rule set stricter
-than the default. Write one trivial function, one test, and confirm
-`uv run pytest` and `uv run ruff check` both pass.
-
-**Exercise: a settings model.** Define a Pydantic Settings class with five
-fields of different types, including one with a validator that rejects bad
-input. Load it from environment variables. Load it from a TOML file. Make the
-precedence explicit and test it.
-
-**Exercise: a two-command CLI.** Using Typer, build `foo status` and
-`foo run --verbose`. Wire structlog so `--verbose` changes the log level.
-Confirm the output is JSON when a flag is set and human-readable otherwise.
-
----
-
 <a id="project-0"></a>
 
 ## Project 0 — The skeleton
 
 **Task:** Establish the repository, module boundaries, configuration pipeline,
 and stable domain vocabulary used by every later project.
-
-### Start here
-
-1. Complete [Building Blocks 0 — Modern Python tooling](#bb-0).
-2. Read the whole product specification once, then keep these exact sources
-   open:
-   - [Product §2 — Vocabulary](#spec-2): what a World, Backend, Gateway,
-     Control, and Agent mean.
-   - [Product §3 — Networking constraint](#spec-3): why mode is a real variant,
-     not a boolean afterthought.
-   - [Product §4 — World lifecycle](#spec-4): state names, meanings, and six
-     invariants.
-   - [Product §5 — Components](#spec-5): who owns and changes each kind of
-     state.
-   - [Product §6.2 — Idle detection and sleep](#spec-6-2): timeout semantics and
-     defaults.
-   - [Product §6.5 — Gateway behavior](#spec-6-5): public port relationships.
-   - [Product §6.6 — Persistence](#spec-6-6): object-store and integrity
-     boundary.
-   - [Product §8 — Gotchas](#spec-8): configuration combinations that must be
-     rejected or represented honestly.
-
-You are not missing a second schema document. The sources above define the
-product facts. The representation choices below are yours.
 
 ### Required result
 
@@ -831,7 +734,7 @@ a serialized model.
 Use this table instead of inferring legal transitions from the diagram alone:
 
 | From       | Trigger and precondition                                                                       | To         | If it cannot complete                                                                                          |
-| ---------- | ---------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| ---------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
 | `SLEEPING` | Wake accepted and capacity available                                                           | `WAKING`   | Remain sleeping while queued, or surface a wake failure                                                        |
 | `WAKING`   | Restore succeeds, backend is ready, and a crossplay join code has been published when required | `AWAKE`    | Retry eligible startup failures; enter `FAILED` when the retry policy is exhausted                             |
 | `AWAKE`    | Idle timeout or operator drain, with zero connected players                                    | `DRAINING` | Refuse the transition while a player is connected                                                              |
@@ -920,73 +823,11 @@ same language._
 
 ---
 
-<a id="bb-1"></a>
-
-## Building Blocks 1 — Text, state, and streams
-
-_Put your other projects aside. Read everything, do every exercise._
-
-Project 1 is a stateful log parser. It is the highest-value pure-Python exercise
-in this project and it maps directly onto the drills you have been doing.
-
-**Reading:
-[`collections` — Counter, defaultdict, deque](https://docs.python.org/3/library/collections.html).**
-You know these. Re-read the `deque` section specifically, with an eye to bounded
-buffers.
-
-**Reading:
-[`re` — Regular Expression HOWTO](https://docs.python.org/3/howto/regex.html).**
-In particular named groups and `re.compile` on module load.
-
-**Reading: [`dataclasses`](https://docs.python.org/3/library/dataclasses.html)
-and [`enum`](https://docs.python.org/3/library/enum.html).** Compare with
-Pydantic models: dataclasses for internal hot-path structures, Pydantic for
-anything crossing a boundary.
-
-**Reading:
-[Valheim dedicated servers — Valheim Wiki](https://valheim.fandom.com/wiki/Dedicated_servers).**
-The community reference. Read the whole page; it is the best single source on
-how the server actually behaves.
-
-**Reading:
-[Official dedicated server guide](https://www.valheimgame.com/support/a-guide-to-dedicated-servers/).**
-Iron Gate's own documentation. Short. Note the crossplay section.
-
-**Exercise: get a real log.** Install the Valheim dedicated server via SteamCMD
-(app 896660) or run `lloesche/valheim-server-docker`. Start it. Join it. Die.
-Disconnect. Rejoin with a second client. Capture the full log. **You cannot
-write this parser from the sample lines in this document; you need a real 1.0
-stream.**
-
-**Exercise: line taxonomy.** Categorize every distinct line shape in your
-capture. How many are useful? How many are Unity noise? Which lines carry
-identity and which do not?
-
-**Exercise: a tiny state machine.** Independent of Valheim: write a parser for a
-synthetic event stream with `LOGIN <user>`, `LOGOUT` (no identity), and
-`DIED <user>` events, where `LOGOUT` always refers to the least-recently-active
-user. Track the live set correctly. Handle starting mid-stream. This is the
-shape of the real problem, without the noise.
-
----
-
 <a id="project-1"></a>
 
 ## Project 1 — Presence
 
 **Task:** Build the log parser that determines who is in a world.
-
-### Start here
-
-Complete [Building Blocks 1 — Text, state, and streams](#bb-1), then review the
-[Agent boundary](#spec-5-agent) and
-[Product §6.1 — Presence detection](#spec-6-1). The recorded log produced by
-BB-1 is test evidence, not optional background reading.
-
-Then work through the
-[Project 1 guided build](docs/project-1.md). It turns those requirements and the
-sanitized recorded session into a chapter-by-chapter implementation path without
-providing the implementation.
 
 **Goals:**
 
@@ -1036,69 +877,12 @@ the first thing that makes the project feel real.
 
 ---
 
-<a id="bb-2"></a>
-
-## Building Blocks 2 — Processes, signals, and async
-
-_Put your other projects aside._
-
-Project 2 supervises a child process. This means async, subprocesses, and
-signals — the three things most likely to produce a hang you cannot explain.
-
-**Reading:
-[asyncio — Coroutines and Tasks](https://docs.python.org/3/library/asyncio-task.html).**
-The whole page. Understand `create_task`, `gather`, `wait_for`, cancellation,
-and `TaskGroup`.
-
-**Reading:
-[asyncio — Subprocesses](https://docs.python.org/3/library/asyncio-subprocess.html).**
-Specifically `create_subprocess_exec` and reading from `stdout` as a stream.
-
-**Reading: [`signal`](https://docs.python.org/3/library/signal.html) and the
-[asyncio signal handling section](https://docs.python.org/3/library/asyncio-eventloop.html#unix-signals).**
-Signals in async Python have sharp edges. Understand `loop.add_signal_handler`
-and why you do not use `signal.signal` in an async program.
-
-**Reading:
-[Async IO in Python — Real Python](https://realpython.com/async-io-python/).**
-The best single narrative introduction. Read it end to end.
-
-**Reading:
-[Kubernetes — Pod Lifecycle: Termination](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination).**
-Read this now, well before Phase C. It defines the shutdown contract you are
-implementing, and knowing the target shape will make your Project 2 design
-correct by default.
-
-**Optional: _Python Concurrency with asyncio_ (Matthew Fowler, Manning).**
-Chapters 1–3 and 6. The best book-length treatment.
-
-**Exercise: supervise `sleep`.** Start a `sleep 300` subprocess. Stream nothing.
-On SIGTERM to your program, forward SIGTERM to the child, wait up to 5 seconds,
-then SIGKILL. Verify both paths with a child that ignores SIGTERM.
-
-**Exercise: stream and parse concurrently.** Start a subprocess that prints a
-line per second. Consume its stdout line by line in one task while a second task
-prints a heartbeat. Confirm neither blocks the other. Now make the subprocess
-produce output faster than you consume it and observe what happens.
-
-**Exercise: timeout that actually times out.** Wrap a coroutine that ignores
-cancellation in `wait_for`. Watch it not time out. Understand why. Fix it.
-
----
-
 <a id="project-2"></a>
 
 ## Project 2 — Supervisor
 
 **Task:** Build the agent — supervise a game server process through its full
 lifecycle.
-
-### Start here
-
-Complete [Building Blocks 2 — Processes, signals, and async](#bb-2). Keep the
-[lifecycle states](#spec-4-states), [Agent boundary](#spec-5-agent),
-[drain contract](#spec-6-3), and [edge-case catalog](#spec-7) open. Project 1's
-parser and fake/recorded logs are prerequisites.
 
 **Goals:**
 
@@ -1142,76 +926,11 @@ _You now have the piece that makes this safe rather than clever._
 
 ---
 
-<a id="bb-3"></a>
-
-## Building Blocks 3 — UDP and binary protocols
-
-_Put your other projects aside._
-
-Project 3 is the gateway. Networking, binary parsing, and the one component with
-genuine adversarial exposure.
-
-**Reading:
-[asyncio — Transports and Protocols](https://docs.python.org/3/library/asyncio-protocol.html).**
-Focus on `DatagramProtocol` and `loop.create_datagram_endpoint`. Note that UDP
-uses the protocol API, not the streams API, and understand why.
-
-**Reading: [`struct`](https://docs.python.org/3/library/struct.html).**
-Byte-level packing. Read the format-character table carefully, especially
-byte-order and alignment specifiers. You will get this wrong at least once.
-
-**Reading:
-[Source Server Queries — Valve Developer Wiki](https://developer.valvesoftware.com/wiki/Server_queries).**
-The A2S specification. Read it completely, including the challenge-response
-section and the notes about split packets. This page is the authority.
-
-**Reading: [python-a2s](https://github.com/Yepoleb/python-a2s).** A clean,
-small, readable client implementation. Read the source — it is the best
-available reference for how the wire format works in practice. You are writing
-the _server_ side, so use it as a reference and as a test client, not as a
-dependency.
-
-**Reading:
-[Knative Serving architecture](https://knative.dev/docs/serving/architecture/).**
-Specifically the **activator**. This is the canonical prior art for what your
-gateway does: a component that receives requests for a workload scaled to zero,
-triggers scale-up, and holds the request until the workload is ready.
-Understanding the activator will tell you what your design is missing. Note that
-it is HTTP-only — the gap you are filling.
-
-**Exercise: UDP echo.** Build an async UDP echo server. Test it with
-`netcat -u`. Then build a client that sends 10,000 datagrams and count how many
-come back. Explain the number.
-
-**Exercise: parse a real A2S response.** Point `python-a2s` at any public
-Valheim or Source server. Capture the raw bytes with Wireshark. Now parse them
-by hand with `struct`, without the library. Match the library's output field for
-field.
-
-**Exercise: forge a response.** Write a program that binds a UDP port and
-answers `A2S_INFO` with fabricated data — a made-up server name and player
-count. Point the Steam server browser at it. Getting your fake server to appear
-in a real client's list is the moment the gateway idea becomes obviously
-feasible.
-
-**Exercise: implement the challenge.** Extend the above so the first query
-returns `S2C_CHALLENGE` and only a query carrying a valid token gets data.
-Verify the Steam client handles the round trip transparently.
-
----
-
 <a id="project-3"></a>
 
 ## Project 3 — Gateway
 
 **Task:** Build the always-on UDP component.
-
-### Start here
-
-Complete [Building Blocks 3 — UDP and binary protocols](#bb-3), then review the
-[networking constraint](#spec-3), [Gateway boundary](#spec-5-gateway),
-[gateway behavior](#spec-6-5), and relevant [field gotchas](#spec-8). The BB-3
-A2S challenge exercise is the protocol spike for this project.
 
 **Goals:**
 
@@ -1257,60 +976,11 @@ _This is the hardest project in Phase A and the one nobody else has built._
 
 ---
 
-<a id="bb-4"></a>
-
-## Building Blocks 4 — Services, state, and APIs
-
-_Put your other projects aside._
-
-Project 4 assembles the parts into a working system.
-
-**Reading:
-[FastAPI — Tutorial, first six pages](https://fastapi.tiangolo.com/tutorial/).**
-Path operations, parameters, request bodies, response models. Note how tightly
-it couples to Pydantic — you already know that half.
-
-**Reading:
-[asyncio — Synchronization Primitives](https://docs.python.org/3/library/asyncio-sync.html).**
-`Lock`, `Event`, `Condition`. The per-world lock required by the
-[World invariants](#spec-4-invariants) is an `asyncio.Lock`; understand exactly
-what it does and does not protect.
-
-**Reading: [httpx](https://www.python-httpx.org/async/).** The async HTTP
-client. Gateway and agent talk to Control with it.
-
-**Reading:
-[Kubernetes — Controllers](https://kubernetes.io/docs/concepts/architecture/controller/).**
-Short page. It describes the reconciliation loop: observe actual state, compare
-to desired state, act to close the gap, repeat. **Build Control this way now,
-before you touch Kubernetes.** Your Phase C operator will then be a port rather
-than a rewrite, and you will understand the pattern from having needed it.
-
-**Exercise: reconcile a directory.** Write a loop that makes a directory's
-contents match a declared list of filenames — creating what's missing, removing
-what shouldn't be there — running every second, correct if interrupted at any
-point and restarted. This is the entire idea behind Kubernetes controllers, and
-it is twenty lines.
-
-**Exercise: a lock that matters.** Write an async function that is not safe to
-run concurrently. Demonstrate the corruption with `gather`. Fix it with a lock.
-Then demonstrate that a per-key lock allows concurrency across keys.
-
----
-
 <a id="project-4"></a>
 
 ## Project 4 — Control, and the v0.1 release
 
 **Task:** Build the orchestrator, wire the system together, and ship it.
-
-### Start here
-
-Complete [Building Blocks 4 — Services, state, and APIs](#bb-4). Re-read the
-[lifecycle and invariants](#spec-4), [Control boundary](#spec-5-control),
-[idle contract](#spec-6-2), [wake contract](#spec-6-4), and
-[edge-case catalog](#spec-7). Projects 0–3 and the fake backend are
-prerequisites.
 
 **Goals:**
 
@@ -1359,56 +1029,11 @@ _Ship this. Everything after is improvement on something real._
 
 ---
 
-<a id="bb-5"></a>
-
-## Building Blocks 5 — Object storage and measurement
-
-_Put your other projects aside._
-
-**Reading:
-[boto3 — S3 usage](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3.html)**,
-or [MinIO's Python client](https://github.com/minio/minio-py) if you prefer a
-smaller API. Either works against any S3-compatible store. Read about multipart
-upload and about conditional requests.
-
-**Reading: [`hashlib`](https://docs.python.org/3/library/hashlib.html) and
-[`tempfile`](https://docs.python.org/3/library/tempfile.html).** Checksums and
-atomic-write patterns. You already know the atomic write dance — `tempfile` in
-the same directory, `fsync`, `os.replace` — apply it here.
-
-**Reading:
-[`time.perf_counter` and `time.monotonic`](https://docs.python.org/3/library/time.html).**
-Know which to use for durations and why `time.time()` is wrong for it.
-
-**Reading:
-[Prometheus Python client](https://prometheus.github.io/client_python/).**
-Counters, gauges, histograms. Read the section on histogram buckets specifically
-— the default buckets are wrong for cold-start latency and you will need custom
-ones.
-
-**Reading:
-[How Not to Measure Latency (Gil Tene)](https://www.youtube.com/watch?v=lJ8ydIuPFeU).**
-An hour, worth it. It will change how you present every number in this project.
-
-**Exercise: instrument a fake pipeline.** Build a three-stage pipeline where
-each stage sleeps a random amount. Instrument each stage with a histogram.
-Produce a waterfall breakdown showing where the time goes. This is exactly the
-artifact you need for the blog post.
-
----
-
 <a id="project-5"></a>
 
 ## Project 5 — Persistence and cold start
 
 **Task:** Move world data to object storage and make wake fast.
-
-### Start here
-
-Complete [Building Blocks 5 — Object storage and measurement](#bb-5), then
-review [drain](#spec-6-3), [wake](#spec-6-4), and [persistence](#spec-6-6). The
-supervisor's verified-save boundary and Control's state transitions are
-prerequisites; this project makes them durable.
 
 **Goals:**
 
@@ -1443,42 +1068,11 @@ that didn't work — that is the part that reads as real.
 
 ---
 
-<a id="bb-6"></a>
-
-## Building Blocks 6 — Discord
-
-_Put your other projects aside. This one is short and fun._
-
-**Reading: [discord.py](https://discordpy.readthedocs.io/en/stable/).** The
-quickstart and the
-[app commands (slash commands) docs](https://discordpy.readthedocs.io/en/stable/interactions/api.html).
-Slash commands, not the old prefix style.
-
-**Reading:
-[Discord Developer Portal — Interactions](https://discord.com/developers/docs/interactions/receiving-and-responding).**
-Note the three-second initial response deadline and the deferred-response
-mechanism. Your wake takes 20+ seconds; you _must_ defer and follow up, and this
-is the number one thing people get wrong.
-
-**Exercise: defer and follow up.** Build a bot with one slash command that takes
-10 seconds. Make it acknowledge immediately, then edit its response with the
-result. Then make it edit progressively — a live countdown.
-
----
-
 <a id="project-6"></a>
 
 ## Project 6 — Discord integration
 
 **Task:** The out-of-band control plane. **Mandatory for crossplay worlds.**
-
-### Start here
-
-Complete [Building Blocks 6 — Discord](#bb-6), then review the
-[crossplay constraint](#spec-3-crossplay), [Agent boundary](#spec-5-agent),
-[wake contract](#spec-6-4), and crossplay cases in the
-[edge-case catalog](#spec-7). Project 5's durable world status is a
-prerequisite.
 
 **Behavior:**
 
@@ -1503,103 +1097,11 @@ private.
 
 ---
 
-<a id="bb-7"></a>
-
-## Building Blocks 7 — Containers and Kubernetes fundamentals
-
-_Put your other projects aside. This is the longest Building Blocks section,
-because you are starting from near zero and everything after depends on it._
-
-Work in this order. Do not skip ahead to operators.
-
-**Reading:
-[Kubernetes Concepts — Overview](https://kubernetes.io/docs/concepts/overview/).**
-What the thing is and what problem it solves.
-
-**Reading: [Pods](https://kubernetes.io/docs/concepts/workloads/pods/).** The
-atomic unit. Understand that a Pod is one or more containers sharing a network
-namespace and lifecycle — that is why your agent can be a sidecar in the
-backend's Pod and see its process and files.
-
-**Reading:
-[Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
-and
-[ReplicaSets](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/).**
-How Pods are managed and scaled. `replicas: 0` is the sleep half of your
-product, and it is one field.
-
-**Reading:
-[Services](https://kubernetes.io/docs/concepts/services-networking/service/).**
-The whole page. Pay attention to: ClusterIP versus NodePort versus LoadBalancer,
-the `protocol: UDP` field, and **what happens to a Service when its Deployment
-is at zero replicas** — the endpoint list is empty and packets are dropped. That
-fact is _why the gateway must exist_.
-
-**Reading:
-[ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) and
-[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/).**
-Configuration and credentials.
-
-**Reading:
-[Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/),
-completely.** Init containers, probes, and termination.
-`terminationGracePeriodSeconds` is the setting that will silently corrupt worlds
-if you leave it at 30.
-
-**Reading:
-[Resource Management for Pods](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).**
-Requests versus limits, and what CPU throttling does to a single-threaded game
-loop. This is where Valheim's clock-speed sensitivity meets the scheduler.
-
-**Book:
-[_The Kubernetes Book_, Nigel Poulton (2026 edition)](https://www.amazon.com/dp/B0948DK7WW).**
-Assumes zero prior knowledge, updated annually, about 300 pages. If you read one
-book, this is it. Read it alongside these docs, not instead of them.
-
-**Book: _Kubernetes in Action, 2nd ed._, Marko Luksa (Manning).** The deep
-reference. Use it as a lookup, not a cover-to-cover read, until you hit
-something the docs don't explain.
-
-**Exercise: local cluster.** Install [kind](https://kind.sigs.k8s.io/) or
-[k3s](https://k3s.io/). Bring up a cluster. Deploy nginx. Expose it. Delete a
-Pod and watch it come back. Scale to zero and watch the Service stop answering.
-**Sit with that last one** — you have just watched the exact problem your
-gateway solves.
-
-**Exercise: containerize Naust.** Multi-stage Dockerfile. Non-root user. Under
-200 MB. Both `uv`-installed dependencies and your source. Push to a registry.
-
-**Exercise: deploy it by hand.** Write raw YAML — Deployment, Service, ConfigMap
-— for gateway and control. No Helm, no operator. Apply it. Debug it.
-`kubectl logs`, `kubectl describe`, `kubectl exec`, `kubectl port-forward`.
-Break it deliberately: wrong image tag, wrong port, missing ConfigMap. Read each
-error and learn its shape.
-
-**Exercise: scale by hand.**
-`kubectl scale deployment/world-midgard --replicas=1`, then `--replicas=0`.
-Watch your gateway's behavior on each side. You have now performed the
-operator's core action manually — which is the right way to understand what you
-are about to automate.
-
-**Exercise: graceful termination.** Deploy a Pod running a process that ignores
-SIGTERM. Delete it and time how long it takes to die. Now set
-`terminationGracePeriodSeconds: 120` and repeat. Then make it handle SIGTERM and
-exit cleanly, and observe the difference.
-
----
-
 <a id="project-7"></a>
 
 ## Project 7 — Kubernetes, by hand
 
 **Task:** Run Naust on Kubernetes with no custom controller. Everything manual.
-
-### Start here
-
-Complete [Building Blocks 7 — Containers and Kubernetes fundamentals](#bb-7),
-then review the [component boundaries](#spec-5), [drain contract](#spec-6-3),
-[persistence contract](#spec-6-6), and infrastructure [gotchas](#spec-8). Deploy
-the existing system manually before automating any of it.
 
 **Goals:**
 
@@ -1627,79 +1129,8 @@ memory sized to the world.
 **Deliverable:** a Helm chart or Kustomize base that installs the whole thing.
 Document what a user must configure.
 
-**Reflection, in writing:** what is tedious about this? Every manual step you
-resent is a line item in the operator's justification. Write them down; they
-become your Phase C blog post's opening.
-
----
-
-<a id="bb-8"></a>
-
-## Building Blocks 8 — Extending Kubernetes
-
-_Put your other projects aside. This is the conceptual centerpiece._
-
-**Reading:
-[Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).**
-How to add your own object types to the API. Read the section on when a CRD is
-appropriate versus an aggregated API server.
-
-**Reading:
-[Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).**
-Short and clarifying: an operator is a custom controller plus a custom resource.
-
-**Reading:
-[Custom Resource Definitions — full reference](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/).**
-Schema validation, printer columns, the **status subresource**, and versioning.
-The status subresource matters: `spec` is what the user wants, `status` is what
-you observed, and they are written by different parties.
-
-**Reading:
-[Finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).**
-How to run cleanup before an object is deleted. **You need this.** When a user
-deletes a `World`, you must flush the save to object storage before the resource
-disappears. Without a finalizer you lose data on delete.
-
-**Reading:
-[Owner references and garbage collection](https://kubernetes.io/docs/concepts/architecture/garbage-collection/).**
-Set an owner reference from the Deployment to the `World`, and Kubernetes cleans
-up children automatically.
-
-**Reading: [Kopf documentation](https://kopf.readthedocs.io/) — Concepts and
-Handlers.** The Python operator framework you will use. Read _Handlers_,
-_Resources_, _Idempotence_, _Errors and retries_, and _Peering_. Kopf is
-MIT-licensed and production-stable; its author describes it as feature-complete
-rather than under active feature development, with ongoing maintenance for new
-Python and Kubernetes versions. That is the right state for a dependency like
-this.
-
-**Reading:
-[kubernetes-client/python](https://github.com/kubernetes-client/python).** The
-official client. Kopf handles watching; you use this to create and patch
-Deployments.
-
-**Book: _Programming Kubernetes_, Hausenblas & Schimanski (O'Reilly).** Chapters
-1–4 and 8. Go-centric, but the concepts are language-independent and it is the
-canonical text on controller internals — the informer/workqueue architecture,
-level-triggered versus edge-triggered reconciliation, and why your controller
-must be idempotent.
-
-**Exercise: a CRD with no controller.** Define a `World` CRD with an OpenAPI
-schema, validation, and printer columns. `kubectl apply` a World.
-`kubectl get worlds` and see your columns. Apply an invalid one and read the
-rejection. Nothing acts on it yet — that's fine, and the separation is the
-point.
-
-**Exercise: a twenty-line operator.** With Kopf, write a controller that logs on
-create, update, and delete of your `World`. Run it locally against your cluster.
-Create and delete Worlds and watch it react. **Then kill it, make three changes
-while it is down, and restart it** — observe how Kopf catches up. That behavior
-is the whole reason the reconciliation model exists.
-
-**Exercise: a finalizer.** Extend it so deleting a World writes a file before
-the resource vanishes. Confirm the resource stays in `Terminating` until your
-handler completes. Then make your handler raise, and watch the resource get
-stuck — now you understand both the power and the footgun.
+**Record what is tedious.** Every manual step is a line item in the
+operator's justification. Write them down; they become its design notes.
 
 ---
 
@@ -1708,14 +1139,6 @@ stuck — now you understand both the power and the footgun.
 ## Project 8 — The operator
 
 **Task:** Turn Control into a Kubernetes operator.
-
-### Start here
-
-Complete [Building Blocks 8 — Extending Kubernetes](#bb-8), then review
-[Vocabulary](#spec-2), [World lifecycle](#spec-4),
-[component boundaries](#spec-5), and [edge cases](#spec-7). Project 7's written
-list of manual pain points is an input to the operator design, not just a
-reflection exercise.
 
 **Goals:**
 
@@ -1758,62 +1181,11 @@ ran. Kill the operator mid-reconcile and assert recovery.
 
 ---
 
-<a id="bb-9"></a>
-
-## Building Blocks 9 — Autoscaling and gRPC
-
-_Put your other projects aside. Last one._
-
-**Reading:
-[HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/).**
-Read it specifically to understand **why it cannot solve your problem**:
-`minReplicas` is effectively ≥1 in the stable path, and at zero replicas there
-are no Pods emitting the metrics HPA scales on. Naming that limitation precisely
-is worth more than any feature you could add.
-
-**Reading: [KEDA — Concepts](https://keda.sh/docs/latest/concepts/) and
-[External Scalers](https://keda.sh/docs/latest/concepts/external-scalers/).**
-KEDA is the project that makes 0↔1 work. The external scaler is a gRPC service
-implementing four RPCs: `IsActive`, `StreamIsActive`, `GetMetricSpec`,
-`GetMetrics`. Note the difference between trigger type `external` (KEDA polls
-`IsActive` on an interval) and `external-push` (KEDA holds a long-lived stream
-and _you_ push activation events). **`external-push` is what you want** —
-polling adds seconds to every wake, and pushing means the instant a packet hits
-the gateway, KEDA knows.
-
-**Reading:
-[gRPC Python quickstart](https://grpc.io/docs/languages/python/quickstart/) and
-[basics](https://grpc.io/docs/languages/python/basics/).** Protobuf, code
-generation, and server-side streaming. You have not used gRPC yet; the streaming
-RPC is the interesting part here.
-
-**Reading:
-[GPU autoscaling on Kubernetes with KEDA — CNCF](https://www.cncf.io/blog/2026/05/27/gpu-autoscaling-on-kubernetes-with-keda-building-an-external-scaler/).**
-A recent, well-written external scaler walkthrough for exactly the analogous
-problem — scaling vLLM inference workloads to zero on a signal KEDA cannot see
-natively. **Read it closely.** It is the clearest available proof that what you
-are building is the same shape as inference platform work, and it will give you
-the vocabulary to say so.
-
-**Exercise: a streaming gRPC service.** Implement a service with one
-server-streaming RPC that pushes an event when a file changes. Client connects,
-holds the stream, receives pushes. This is `StreamIsActive` with the names
-changed.
-
----
-
 <a id="project-9"></a>
 
 ## Project 9 — KEDA external scaler
 
 **Task:** Implement KEDA's external scaler contract so wake is push-driven.
-
-### Start here
-
-Complete [Building Blocks 9 — Autoscaling and gRPC](#bb-9), then review the
-[idle contract](#spec-6-2), [Gateway boundary](#spec-5-gateway), and
-[Control boundary](#spec-5-control). Project 8's controller is a prerequisite;
-this project deliberately transfers ownership of one field away from it.
 
 **Behavior:**
 
@@ -1841,22 +1213,14 @@ configuration.
 
 <a id="project-10"></a>
 
-## Project 10 — Observability and the writeup
+## Project 10 — Observability
 
-**Task:** Make it measurable, then write the thing that gets read.
-
-### Start here
-
-Review the [full product specification](#product-specification) and the
-measurements recorded in Projects 3, 5, and 9. Every claim in the writeup must
-be backed by a requirement, experiment, or measurement already present in the
-repository.
+**Task:** Make it measurable.
 
 **Goals:**
 
 - Prometheus metrics across all components.
 - A Grafana dashboard shipped in the repo.
-- The blog post.
 
 **Metrics:** cold-start duration by phase (histogram), wake requests by trigger
 source and outcome, worlds by state (gauge), drain duration and outcome, save
@@ -1866,37 +1230,13 @@ and rate-limit rejections, KEDA activation latency.
 **The dashboard:** worlds awake versus registered, cold-start p50/p95/p99, cost
 saved versus always-on, wake success rate. Ship the JSON.
 
-**The blog post.** Title it with a number, not an adjective: _"Scale-to-zero for
-stateful workloads: 4 minutes to 22 seconds."_
-
-Structure:
-
-1. The problem — 94% idle, with real numbers.
-2. Why Kubernetes doesn't solve it — HPA's floor, and empty endpoints at zero
-   replicas.
-3. Prior art — Knative's activator, KEDA's HTTP interceptor — and the gap: both
-   are HTTP-only.
-4. The UDP activator, and why UDP is harder (nothing to hold open).
-5. Cold-start decomposition, with the waterfall.
-6. What you optimized, in order, with measurements — including what didn't work.
-7. **The connection to inference serving**, stated explicitly. Request arrives,
-   backend is cold, hold the caller, warm the backend, forward. It is the same
-   problem, and HTTP does the stalling for you. Do not leave this to the reader.
-
-Post to r/valheim and r/selfhosted with the game framing, and to Hacker News a
-day later with the engineering framing. Different audiences, different titles,
-same repo.
-
 ---
 
 <a id="reference"></a>
 
 # Part III — Reference
 
-This part is an index, not another reading assignment. A project's **Start
-here** block and its prerequisite Building Block, when applicable, are the
-authoritative reading path. Use the tables below when you need to resolve a
-specific question.
+This part is an index. Use the tables below to resolve a specific question.
 
 ## A. Source hierarchy and evidence
 
@@ -1914,7 +1254,7 @@ disagreement and use this order:
    verify.
 
 | Question                                                  | Primary source                                                                                                  | Supporting evidence                                                                                                   | First used    |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------- |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------- |
 | What must Naust do?                                       | [Part I — Product specification](#product-specification)                                                        | [Product edge cases](#spec-7) turned into tests                                                                       | Every project |
 | How does Valheim expose server modes and launch behavior? | [Official dedicated-server guide](https://www.valheimgame.com/support/a-guide-to-dedicated-servers/)            | [Community dedicated-server reference](https://valheim.fandom.com/wiki/Dedicated_servers) plus your captured 1.0 logs | BB-1          |
 | What bytes does Steam A2S require?                        | [Valve — Source Server Queries](https://developer.valvesoftware.com/wiki/Server_queries)                        | Packet capture and [python-a2s](https://github.com/Yepoleb/python-a2s) as a test client                               | BB-3          |
@@ -1974,7 +1314,7 @@ Ordered as introduced.
 
 ## D. Further reading
 
-Everything below is optional unless a Building Block explicitly assigns it.
+Everything below is optional background.
 
 **Books**
 
@@ -2008,25 +1348,6 @@ Everything below is optional unless a Building Block explicitly assigns it.
 
 - Gil Tene,
   [How Not to Measure Latency](https://www.youtube.com/watch?v=lJ8ydIuPFeU)
-
-## E. Schedule
-
-| Phase                  | Projects | Target         | Status        |
-| ---------------------- | -------- | -------------- | ------------- |
-| A — single node        | 0–4      | September 9    | Ships as v0.1 |
-| B — durability & reach | 5–6      | Late September | v0.2          |
-| C — Kubernetes         | 7–10     | October        | The writeup   |
-
-**Week one is a spike, not a project.** Before writing a line of Naust, confirm
-you can bind UDP 2456, observe a Valheim client's join attempt, and answer an
-A2S query that the Steam server browser renders. If that does not work, the
-entire Level 2 gateway design is void and you need to know in week one, not week
-three.
-
-**One standing rule.** If this collides with interview preparation, interview
-preparation wins. A repo with four hundred stars does not produce an offer. A
-bad systems round removes one. Naust is the thing you talk about _in_ the
-interview — it is not a substitute for being ready for it.
 
 ---
 
