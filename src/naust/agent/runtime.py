@@ -97,7 +97,7 @@ class WorldRuntime:
         self.dispatcher = Dispatcher(sinks if sinks is not None else _build_sinks(config.sinks))
         self._raw_log: TextIO | None = _open_raw_log(config, world.id)
         self.supervisor = BackendSupervisor(
-            command or self.profile.build_command(world, launch),
+            (command or self.profile.build_command(world, launch)).wrapped(launch.wrapper),
             self.profile.observer(),
             self.profile.resolver(),
             self.status.save_files,

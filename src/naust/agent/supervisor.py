@@ -52,11 +52,32 @@ class BackendState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class BackendCommand:
-    """How to launch the backend. ``env`` of ``None`` inherits the parent's."""
+    """How to launch the backend. ``env`` of ``None`` inherits the parent's.
+
+    ``target_comm`` names the process that must receive signals when the
+    launched process is only a wrapper around it (a sandbox such as
+    bubblewrap, which exits on SIGTERM without forwarding anything). It is
+    compared against ``/proc/<pid>/comm``, so it is the executable's file
+    name truncated to fifteen characters. ``None`` signals the launched
+    process itself.
+    """
 
     argv: tuple[str, ...]
     cwd: Path | None = None
     env: Mapping[str, str] | None = None
+    target_comm: str | None = None
+
+    def wrapped(self, wrapper: tuple[str, ...]) -> "BackendCommand":
+        """Run through ``wrapper`` (e.g. steam-run); signals still reach the game."""
+
+        if not wrapper:
+            return self
+        return BackendCommand(
+            argv=(*wrapper, *self.argv),
+            cwd=self.cwd,
+            env=self.env,
+            target_comm=self.target_comm or Path(self.argv[0]).name[:15],
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -413,7 +434,32 @@ class BackendSupervisor:
         if process.returncode is not None:
             return
         with contextlib.suppress(ProcessLookupError):
-            process.send_signal(sig)
+            os.kill(self._signal_target(), sig)
+
+    def _signal_target(self) -> int:
+        """The game's PID: the deepest descendant matching ``target_comm``.
+
+        Falls back to the launched process when no wrapper is in play or the
+        platform has no /proc.
+        """
+
+        process = self._require_process()
+        wanted = self.command.target_comm
+        if wanted is None or not Path("/proc").is_dir():
+            return process.pid
+        best: tuple[int, int] | None = None  # (depth, pid)
+        stack = [(process.pid, 0)]
+        while stack:
+            pid, depth = stack.pop()
+            try:
+                comm = Path(f"/proc/{pid}/comm").read_text().strip()
+                children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
+            except OSError:
+                continue
+            if comm == wanted and (best is None or depth > best[0]):
+                best = (depth, pid)
+            stack.extend((int(child), depth + 1) for child in children)
+        return best[1] if best is not None else process.pid
 
     def _fail(self, outcome: DrainOutcome, detail: str) -> DrainReport:
         self.state = BackendState.FAILED

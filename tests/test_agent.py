@@ -272,6 +272,7 @@ def test_build_command_for_crossplay(tmp_path: Path) -> None:
         "-crossplay",
     )
     assert command.cwd == exe.parent
+    assert command.target_comm == "valheim_server."
     assert command.env is not None
     assert command.env["SteamAppId"] == "892970"
     assert command.env["LD_LIBRARY_PATH"].startswith(str(exe.parent / "linux64"))

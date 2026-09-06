@@ -37,6 +37,10 @@ let
       state_dir = "${cfg.dataDir}/state";
       backend = {
         executable = "${cfg.serverDir}/valheim_server.x86_64";
+        # Only the game runs inside Steam's FHS sandbox. naust stays the unit's
+        # main process so SIGTERM reaches it; it signals the game by PID
+        # through the sandbox, which does not forward signals itself.
+        wrapper = [ (lib.getExe steamRun) ];
         save_dir = cfg.saveDir;
         max_players = cfg.maxPlayers;
         extra_args = cfg.extraServerArgs;
@@ -113,7 +117,7 @@ let
           NAUST_AGENT__SINKS="''${NAUST_AGENT__SINKS//\$CREDENTIALS_DIRECTORY/$CREDENTIALS_DIRECTORY}"
           export NAUST_AGENT__SINKS
         ''}
-        exec ${lib.getExe steamRun} ${lib.getExe cfg.package} agent --world ${lib.escapeShellArg id}
+        exec ${lib.getExe cfg.package} agent --world ${lib.escapeShellArg id}
       '';
       update = pkgs.writeShellScript "naust-${id}-update" ''
         set -euo pipefail
@@ -157,7 +161,7 @@ let
         # naust sends READY=1 when the game accepts players, STATUS with the
         # player count, and extends the stop timeout while draining.
         Type = "notify";
-        NotifyAccess = "all"; # naust runs under steam-run's bwrap, so it is not the main PID
+        NotifyAccess = "main";
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = configDir;

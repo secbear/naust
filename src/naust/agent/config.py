@@ -21,6 +21,12 @@ class BackendLaunchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     executable: Path | None = None
+    wrapper: tuple[str, ...] = ()
+    """Command prefix the game runs under, e.g. ``("steam-run",)`` on NixOS.
+
+    Only the game is wrapped; the agent itself is not, so it stays the
+    service's main process and signals reach the game through the wrapper.
+    """
     save_dir: Path = Path("/var/lib/naust/worlds")
     password: SecretStr | None = None
     extra_args: tuple[str, ...] = ()

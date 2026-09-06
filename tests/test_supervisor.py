@@ -345,3 +345,29 @@ def test_verify_save_ignores_ratio_without_previous(tmp_path: Path) -> None:
         _write(path, 1)
 
     assert verify_save(files, {}, time.time(), FAST) is None
+
+
+# ---- wrappers that do not forward signals -------------------------------------
+
+
+@pytest.mark.skipif(not Path("/proc").is_dir(), reason="needs /proc to find the game process")
+async def test_drain_signals_the_game_through_a_wrapper(tmp_path: Path) -> None:
+    wrapper = (sys.executable, str(Path(__file__).parent / "fake_wrapper.py"))
+    command = fake_backend(tmp_path).wrapped(wrapper)
+    assert command.argv[:2] == wrapper
+    assert command.target_comm == Path(sys.executable).name[:15]
+    sup = BackendSupervisor(
+        command, ValheimObserver(), ValheimResolver(), save_files(tmp_path), policy=FAST
+    )
+    await sup.start()
+    await sup.wait_ready(READY_TIMEOUT)
+
+    report = await sup.drain()
+
+    assert report.outcome is DrainOutcome.STOPPED, report
+    assert save_files(tmp_path).paths[0].stat().st_size > 0
+
+
+def test_wrapping_is_a_no_op_without_a_wrapper(tmp_path: Path) -> None:
+    command = fake_backend(tmp_path)
+    assert command.wrapped(()) is command

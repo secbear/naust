@@ -55,7 +55,9 @@ def build_command(world: WorldConfig, launch: BackendLaunchConfig) -> BackendCom
     if existing := os.environ.get("LD_LIBRARY_PATH"):
         library_path = f"{library_path}:{existing}"
     env = {**os.environ, "SteamAppId": STEAM_APP_ID, "LD_LIBRARY_PATH": library_path}
-    return BackendCommand(argv=tuple(argv), cwd=server_dir, env=env)
+    return BackendCommand(
+        argv=tuple(argv), cwd=server_dir, env=env, target_comm=executable.name[:15]
+    )
 
 
 def save_files(world: WorldConfig, launch: BackendLaunchConfig) -> SaveFiles:
