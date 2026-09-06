@@ -76,3 +76,10 @@ first adapter had to learn.
 | `nix/nixos/naust.nix` | the NixOS module |
 | `docs/` | architecture, decisions, NixOS guide, field notes |
 | `tests/` | unit and property tests, a fake backend, recorded fixtures |
+
+## License
+
+Free for personal and other noncommercial use under the
+[PolyForm Noncommercial License 1.0.0](LICENSE.md). Running a server for
+your friends is exactly what it is for. Commercial use, such as hosting
+worlds for paying customers, needs a separate license; open an issue to ask.

@@ -3,6 +3,8 @@ name = "naust"
 version = "0.1.0"
 description = "Scale-to-zero sidecar for game servers that cannot integrate an SDK"
 readme = "README.md"
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE.md"]
 authors = [
     { name = "Bryce Thorpe" }
 ]
