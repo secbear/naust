@@ -368,6 +368,10 @@ async def test_runtime_speaks_the_contract(tmp_path: Path, capture, socket_dir: 
         else:
             raise AssertionError("never ready")
 
+        async with control.get("http://naust/v1/status") as r:
+            before_join = await r.json()
+        assert before_join["presence"]["idleSince"] is not None, "empty since ready"
+
         await runtime.supervisor.write_stdin("join Alice 5\n")
         for _ in range(100):
             if runtime.status.count == 1:

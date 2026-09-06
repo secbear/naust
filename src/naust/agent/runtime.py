@@ -183,6 +183,7 @@ class WorldRuntime:
 
         self.session.ready_monotonic = time.monotonic()
         self.session.idle_since = self.session.ready_monotonic
+        self.status.idle_since = now_iso()  # empty since ready, until a transition says otherwise
         self.status.set_condition("Ready", "True", "BackendReady")
         self._sync()
         notify.ready()
