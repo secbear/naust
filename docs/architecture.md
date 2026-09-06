@@ -240,8 +240,8 @@ consumer of events and status and lives outside.
 
 | Substrate | Wake | Drain | Sleep cost | Status |
 | --- | --- | --- | --- | --- |
-| NixOS module, on-demand VM | cloud API starts the host; `autoStart` starts the unit | idle policy, exit 0, `postDrainCommand`, `onDrained = "poweroff"` | one disk | built, not yet run on a real host |
-| NixOS module, always-on host | `systemctl start` from any trigger | same | zero | built, not yet run on a real host |
+| NixOS module, on-demand VM | cloud API starts the host; `autoStart` starts the unit | idle policy, exit 0, `postDrainCommand`, `onDrained = "poweroff"` | one disk | verified on GCE, September 2026 |
+| NixOS module, always-on host | `systemctl start` from any trigger | same | zero | built; same unit as the on-demand host |
 | Container image | orchestrator starts the container; agent is PID 1 | SIGTERM; exit code drives restart policy | none | not built; thin when needed |
 | Kubernetes pod | Deployment 0→1 by an autoscaler or operator | SIGTERM with `terminationGracePeriodSeconds` above the drain budget; probes hit `/readyz` on the TCP listener | none | not built; the contract is designed for it |
 

@@ -22,9 +22,10 @@ decisions live in [docs/decisions/](docs/decisions/).
 
 The gateway, Control, object-store persistence, a Discord bot, and the
 Kubernetes projects below are optional substrates above that contract and are
-not built. Nothing in this repository has yet been run against a real
-dedicated server on Linux; the first crossplay capture is the next piece of
-evidence.
+not built. The agent has run a crossplay Valheim world on a NixOS host on
+GCE: start, join code, presence, idle drain with a verified save, operator
+stop, and poweroff, with a sanitized capture of that session in
+`tests/fixtures/valheim/crossplay-session.log`.
 
 ## How to use this document
 
