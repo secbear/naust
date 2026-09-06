@@ -148,7 +148,7 @@ let
         # naust sends READY=1 when the game accepts players, STATUS with the
         # player count, and extends the stop timeout while draining.
         Type = "notify";
-        NotifyAccess = "main";
+        NotifyAccess = "all"; # naust runs under steam-run's bwrap, so it is not the main PID
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = configDir;
