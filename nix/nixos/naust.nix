@@ -46,6 +46,9 @@ let
         metrics_host = cfg.metricsHost;
         metrics_port = cfg.metricsPort;
       };
+    }
+    // lib.optionalAttrs (cfg.rawLogDir != null) {
+      raw_log_dir = cfg.rawLogDir;
     };
     worlds = lib.mapAttrsToList worldSettings cfg.worlds;
   };
@@ -338,6 +341,24 @@ in
       );
     };
 
+    rawLogDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      example = "/var/lib/naust/logs";
+      description = ''
+        Keep a copy of the game's raw output, one file per session, under
+        this directory. The journal carries only naust's events; raw output
+        is what a new adapter pattern is written from. Files older than
+        {option}`rawLogKeepDays` are removed.
+      '';
+    };
+
+    rawLogKeepDays = lib.mkOption {
+      type = lib.types.int;
+      default = 14;
+      description = "How long raw session logs are kept.";
+    };
+
     preStartCommand = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -492,5 +513,9 @@ in
     );
 
     environment.systemPackages = [ cfg.package ];
+
+    systemd.tmpfiles.rules = lib.optional (cfg.rawLogDir != null) (
+      "d ${cfg.rawLogDir} 0750 ${cfg.user} ${cfg.group} ${toString cfg.rawLogKeepDays}d"
+    );
   };
 }

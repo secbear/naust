@@ -14,7 +14,8 @@ import contextlib
 import signal
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, TextIO
 
 import structlog
 
@@ -94,6 +95,7 @@ class WorldRuntime:
         self.metrics = AgentMetrics()
         self.events = EventFactory.for_world(config.source_host, world.id)
         self.dispatcher = Dispatcher(sinks if sinks is not None else _build_sinks(config.sinks))
+        self._raw_log: TextIO | None = _open_raw_log(config, world.id)
         self.supervisor = BackendSupervisor(
             command or self.profile.build_command(world, launch),
             self.profile.observer(),
@@ -103,6 +105,7 @@ class WorldRuntime:
             tracker=PresenceTracker(max_players=launch.max_players),
             on_transition=self._on_transition,
             on_fact=self._on_fact,
+            raw_log=self._raw_log,
         )
         socket_path = None
         if config.surface.socket_dir is not None:
@@ -145,6 +148,8 @@ class WorldRuntime:
                 loop.remove_signal_handler(sig)
             await self.surface.stop()
             await self.dispatcher.close(self.config.event_flush_timeout.total_seconds())
+            if self._raw_log is not None:
+                self._raw_log.close()
 
     async def _run(self) -> int:
         sup = self.supervisor
@@ -336,6 +341,14 @@ class WorldRuntime:
         self.status.state = BackendState.FAILED
         self._sync()
         self._emit(type_, level="error", **data)
+
+
+def _open_raw_log(config: AgentConfig, world_id: str) -> TextIO | None:
+    if config.raw_log_dir is None:
+        return None
+    config.raw_log_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return (config.raw_log_dir / f"{world_id}-{stamp}.log").open("a", encoding="utf-8")
 
 
 def _build_sinks(configs: tuple[SinkConfig, ...]) -> list[Sink]:

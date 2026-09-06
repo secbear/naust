@@ -83,6 +83,13 @@ class AgentConfig(BaseModel):
     control_url: HttpUrl = HttpUrl("http://127.0.0.1:8000")
     backend: BackendLaunchConfig = Field(default_factory=BackendLaunchConfig)
     state_dir: Path = Path("/var/lib/naust/state")
+    raw_log_dir: Path | None = None
+    """Copy every backend output line to ``<dir>/<world>-<start time>.log``.
+
+    Raw game output is the evidence adapters are written from; the journal
+    only carries naust's own events. Off by default because it grows without
+    bound; the host is expected to prune the directory.
+    """
     idle_check_interval: PositiveDuration = timedelta(seconds=5)
     sinks: tuple[SinkConfig, ...] = ()
     surface: SurfaceConfig = Field(default_factory=SurfaceConfig)

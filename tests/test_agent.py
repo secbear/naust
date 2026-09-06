@@ -84,6 +84,27 @@ async def test_empty_world_drains_on_idle_timeout(tmp_path: Path) -> None:
     assert marker.exists()
 
 
+async def test_raw_log_captures_every_backend_line(tmp_path: Path) -> None:
+    w = world()
+    cfg = config(tmp_path).model_copy(update={"raw_log_dir": tmp_path / "logs"})
+
+    code = await run_world(
+        w,
+        cfg,
+        profile=FAST_PROFILE,
+        command=fake(tmp_path),
+        files=valheim.save_files(w, cfg.backend),
+        policy=policy(),
+    )
+
+    assert code == EXIT_OK
+    [log] = list((tmp_path / "logs").glob("testworld-*.log"))
+    text = log.read_text()
+    assert "Game server connected" in text
+    assert "World saved" in text
+    assert log.name.endswith("Z.log")
+
+
 async def test_half_present_world_is_refused_before_start(tmp_path: Path) -> None:
     w = world()
     files = valheim.save_files(w, config(tmp_path).backend)

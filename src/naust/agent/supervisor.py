@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
+from typing import TextIO
 
 from naust.agent.presence import PresenceTracker, PresenceTransition
 from naust.games.facts import (
@@ -165,6 +166,7 @@ class BackendSupervisor:
         on_transition: Callable[[PresenceTransition], None] | None = None,
         on_fact: Callable[[Fact], None] | None = None,
         recent_lines: int = 200,
+        raw_log: TextIO | None = None,
     ) -> None:
         self.command = command
         self.policy = policy or DrainPolicy()
@@ -179,6 +181,7 @@ class BackendSupervisor:
         self._resolver = resolver
         self._on_transition = on_transition
         self._on_fact = on_fact
+        self._raw_log = raw_log
         self._recent: deque[str] = deque(maxlen=recent_lines)
         self._process: asyncio.subprocess.Process | None = None
         self._pump: asyncio.Task[None] | None = None
@@ -333,6 +336,9 @@ class BackendSupervisor:
                     break
                 line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
                 self._recent.append(line)
+                if self._raw_log is not None:
+                    self._raw_log.write(line + "\n")
+                    self._raw_log.flush()
                 observation = self._observer.parse_line(line)
                 if observation is None:
                     continue
