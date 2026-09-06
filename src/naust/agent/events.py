@@ -1,11 +1,13 @@
 """CloudEvents 1.0 envelopes for what the agent observed.
 
-Every event carries ``naustsequence`` so a consumer can tell it missed one
-and re-read status instead of trusting a gap.
+Every event carries ``naustrun``, an id for this agent process, and
+``naustsequence``, which counts from 1 within a run. A consumer that sees a
+new run resets; within a run it can tell it missed something and re-read
+status instead of trusting a gap.
 """
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from naust.agent.status import now_iso
@@ -25,6 +27,7 @@ class Event:
 @dataclass(frozen=True, slots=True)
 class EventFactory:
     source: str
+    run: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     @classmethod
     def for_world(cls, host: str, world_id: str) -> "EventFactory":
@@ -38,6 +41,7 @@ class EventFactory:
             "type": TYPE_PREFIX + event.type,
             "time": now_iso(),
             "datacontenttype": "application/json",
+            "naustrun": self.run,
             "naustsequence": sequence,
             "data": event.data,
         }

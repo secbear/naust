@@ -160,8 +160,10 @@ generic meaning.
 
 ### Events
 
-CloudEvents 1.0, JSON structured mode, with a `naustsequence` extension so
-consumers can detect gaps.
+CloudEvents 1.0, JSON structured mode, with two extensions: `naustrun`, an
+id for the agent process that produced the event, and `naustsequence`,
+counting from 1 within that run. A consumer resets on a new run and can
+detect a gap within one.
 
 | Type | Data |
 | --- | --- |
