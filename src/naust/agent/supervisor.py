@@ -479,9 +479,3 @@ class BackendSupervisor:
         if self._signals is None:
             raise RuntimeError("backend not started")
         return self._signals
-
-
-def inherit_env(**overrides: str) -> dict[str, str]:
-    """The parent's environment plus overrides, for :class:`BackendCommand`."""
-
-    return {**os.environ, **overrides}

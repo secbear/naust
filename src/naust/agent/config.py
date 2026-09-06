@@ -5,7 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from naust.domain.world import PositiveDuration
 
@@ -86,7 +86,6 @@ class SurfaceConfig(BaseModel):
 class AgentConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    control_url: HttpUrl = HttpUrl("http://127.0.0.1:8000")
     backend: BackendLaunchConfig = Field(default_factory=BackendLaunchConfig)
     state_dir: Path = Path("/var/lib/naust/state")
     raw_log_dir: Path | None = None

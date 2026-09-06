@@ -1,7 +1,7 @@
 [project]
 name = "naust"
 version = "0.1.0"
-description = "Scale-to-zero orchestration for persistent Valheim worlds"
+description = "Scale-to-zero sidecar for game servers that cannot integrate an SDK"
 readme = "README.md"
 authors = [
     { name = "Bryce Thorpe" }

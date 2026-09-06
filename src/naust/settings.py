@@ -1,6 +1,5 @@
 """External configuration boundary and source precedence for Naust."""
 
-from collections.abc import Hashable, Iterable
 from typing import Any, Self
 
 from pydantic import Field, model_validator
@@ -12,22 +11,16 @@ from pydantic_settings import (
 )
 
 from naust.agent.config import AgentConfig
-from naust.control.config import ControlConfig
 from naust.domain.world import SteamDirectWorldConfig, WorldConfig
-from naust.gateway.config import GatewayConfig
 from naust.log import LogLevel
-from naust.storage.config import S3StorageConfig
 
 
 class NaustSettings(BaseSettings):
     """Resolved desired configuration; observed state never appears here."""
 
     log_level: LogLevel = LogLevel.INFO
-    storage: S3StorageConfig = Field(default_factory=S3StorageConfig)
     worlds: tuple[WorldConfig, ...] = ()
     agent: AgentConfig = Field(default_factory=AgentConfig)
-    control: ControlConfig = Field(default_factory=ControlConfig)
-    gateway: GatewayConfig = Field(default_factory=GatewayConfig)
 
     model_config = SettingsConfigDict(
         env_prefix="NAUST_",
@@ -55,8 +48,11 @@ class NaustSettings(BaseSettings):
 
     @model_validator(mode="after")
     def registry_invariants(self) -> Self:
-        self._require_unique("world id", (world.id for world in self.worlds))
-        self._require_unique("storage prefix", (world.storage_prefix for world in self.worlds))
+        seen: set[str] = set()
+        for world in self.worlds:
+            if world.id in seen:
+                raise ValueError(f"duplicate world id: {world.id!r}")
+            seen.add(world.id)
 
         allocated_ports: dict[int, str] = {}
         for world in self.worlds:
@@ -71,21 +67,7 @@ class NaustSettings(BaseSettings):
                 allocated_ports[port] = world.id
         return self
 
-    @staticmethod
-    def _require_unique(label: str, values: Iterable[Hashable]) -> None:
-        seen: set[Hashable] = set()
-        for value in values:
-            if value in seen:
-                raise ValueError(f"duplicate {label}: {value!r}")
-            seen.add(value)
-
     def resolved_config(self) -> dict[str, Any]:
-        """Return a JSON-ready view with credential fields removed entirely."""
+        """Return a JSON-ready view with the backend password removed entirely."""
 
-        return self.model_dump(
-            mode="json",
-            exclude={
-                "storage": {"access_key", "secret_key"},
-                "agent": {"backend": {"password"}},
-            },
-        )
+        return self.model_dump(mode="json", exclude={"agent": {"backend": {"password"}}})

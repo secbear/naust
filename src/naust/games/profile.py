@@ -49,10 +49,6 @@ class SaveMethod:
     def by_signal(cls, sig: Signals) -> "SaveMethod":
         return cls(signal=sig)
 
-    @classmethod
-    def by_command(cls, command: str) -> "SaveMethod":
-        return cls(command=command)
-
     @property
     def kind(self) -> Literal["signal", "command", "autosave-only"]:
         if self.signal is not None:

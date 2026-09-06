@@ -1,7 +1,10 @@
-"""Stable domain vocabulary for a Naust-managed world.
+"""The operator's description of one world: the desired configuration.
 
-Desired configuration and observed status deliberately live in separate models:
-operators write a ``WorldConfig`` while Control alone owns ``WorldStatus``.
+Observed state never lives here; that is the agent's status document. A
+world's networking ``mode`` is a real fork, not a flag: Steam-direct owns
+public ports that an orchestrator may route to, crossplay owns nothing
+inbound and is reachable only through a join code that changes on every
+start.
 """
 
 from datetime import timedelta
@@ -27,27 +30,12 @@ type OwnerLabel = Annotated[
     str,
     StringConstraints(min_length=1, max_length=128, strip_whitespace=True),
 ]
-type StoragePrefix = Annotated[
-    str,
-    StringConstraints(
-        min_length=1,
-        max_length=512,
-        pattern=r"^[A-Za-z0-9][A-Za-z0-9._/-]*$",
-        strip_whitespace=True,
-    ),
-]
 type PositiveDuration = Annotated[timedelta, Field(gt=timedelta(0))]
 type GameName = Annotated[
     str,
     StringConstraints(min_length=1, max_length=32, pattern=r"^[a-z0-9-]+$"),
 ]
 type GamePort = Annotated[int, Field(ge=1, le=65_534)]
-
-
-def _default_storage_prefix(validated_data: dict[str, object]) -> str:
-    """Keep the conventional object layout tied to the world's stable ID."""
-
-    return f"worlds/{validated_data['id']}"
 
 
 class _DomainModel(BaseModel):
@@ -59,38 +47,24 @@ class WorldMode(StrEnum):
     CROSSPLAY = "crossplay"
 
 
-class WorldState(StrEnum):
-    SLEEPING = "SLEEPING"
-    WAKING = "WAKING"
-    AWAKE = "AWAKE"
-    DRAINING = "DRAINING"
-    FAILED = "FAILED"
-
-
-class ResourceIntent(_DomainModel):
-    """Per-world scheduler intent with explicit units."""
-
-    cpu_millicores: int = Field(default=1_000, gt=0)
-    memory_mib: int = Field(default=2_048, gt=0)
-
-
 class _WorldConfigBase(_DomainModel):
     """Fields shared by both mutually exclusive networking modes."""
 
     id: WorldId
+    """Immutable and URL-safe: file names, socket names, and event sources use it."""
     name: DisplayName
+    """What players see; renaming a world does not move anything on disk."""
     owner: OwnerLabel
+    """A label for humans, not an authorization principal."""
     game: GameName = "valheim"
-    storage_prefix: StoragePrefix = Field(default_factory=_default_storage_prefix)
     idle_timeout: PositiveDuration | None = timedelta(minutes=15)
+    """``None`` hands the drain decision to whoever orchestrates the agent."""
     connection_grace_period: PositiveDuration = timedelta(minutes=3)
-    resources: ResourceIntent = Field(default_factory=ResourceIntent)
 
 
 class SteamDirectWorldConfig(_WorldConfigBase):
     mode: Literal[WorldMode.STEAM_DIRECT] = WorldMode.STEAM_DIRECT
     game_port: GamePort = 2_456
-    bepinex_enabled: bool = False
 
     @computed_field
     @property
@@ -108,9 +82,3 @@ type WorldConfig = Annotated[
     SteamDirectWorldConfig | CrossplayWorldConfig,
     Field(discriminator="mode"),
 ]
-
-
-class WorldStatus(_DomainModel):
-    """Minimal Control-owned observed status for Project 0."""
-
-    state: WorldState

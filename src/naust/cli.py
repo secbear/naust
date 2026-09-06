@@ -1,21 +1,18 @@
 """Human-facing Typer CLI and composition boundary for Naust."""
 
 import asyncio
-from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
 
 import structlog
 import typer
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from naust.agent.presence import PresenceTracker
 from naust.agent.replay import ReplayEvent, replay
-from naust.agent.service import run_agent, run_world
-from naust.control.service import run_control
+from naust.agent.service import run_world
 from naust.games.facts import BackendReady, BackendVersion, JoinInfo, SaveCompleted
 from naust.games.registry import get_profile
-from naust.gateway.service import run_gateway
 from naust.log import LogLevel, setup_logging
 from naust.settings import NaustSettings
 
@@ -30,18 +27,18 @@ def root(
         typer.Option("--log-level", help="Override the configured log level."),
     ] = None,
 ) -> None:
-    """Run one Naust component with CLI > env > TOML > default precedence."""
+    """Supervise game servers that sleep when nobody is playing."""
 
     ctx.obj = {}
     if log_level is not None:
         ctx.obj["log_level"] = log_level
 
 
-def _load_settings(ctx: typer.Context, **component_override: Any) -> NaustSettings:
-    overrides = dict(ctx.obj or {})
-    overrides.update(component_override)
+def _load_settings(ctx: typer.Context, **overrides: Any) -> NaustSettings:
+    values = dict(ctx.obj or {})
+    values.update(overrides)
     try:
-        return NaustSettings(**overrides)
+        return NaustSettings(**values)
     except ValidationError as error:
         details = "; ".join(
             f"{'.'.join(map(str, item['loc']))}: {item['msg']}"
@@ -50,45 +47,22 @@ def _load_settings(ctx: typer.Context, **component_override: Any) -> NaustSettin
         raise typer.BadParameter(f"invalid configuration: {details}") from None
 
 
-def _start_component[ComponentConfig: BaseModel](
-    name: str,
-    settings: NaustSettings,
-    config: ComponentConfig,
-    runner: Callable[[ComponentConfig], None],
-) -> None:
-    setup_logging(settings.log_level)
-    structlog.get_logger("naust").info(
-        "component.starting",
-        component=name,
-        config=settings.resolved_config(),
-    )
-    runner(config)
-
-
 @app.command()
 def agent(
     ctx: typer.Context,
     world: Annotated[
-        str | None,
+        str,
         typer.Option("--world", help="Supervise this configured world until it drains."),
-    ] = None,
-    control_url: Annotated[
-        str | None,
-        typer.Option("--control-url", help="Override Control's HTTP URL."),
-    ] = None,
+    ],
 ) -> None:
-    """Start the per-backend Agent.
+    """Launch a world's backend, track presence, and drain it cleanly.
 
-    With --world, launch that world's backend, track presence, and drain it
-    on idle timeout, SIGTERM, or SIGINT. Exit status 0 means the world was
-    saved, verified, and stopped; 1 means it needs a human.
+    The drain starts on idle timeout, SIGTERM, SIGINT, or a command on the
+    unix socket. Exit status 0 means the world was saved, verified, and
+    stopped; 1 means it needs a human; 2 means the configuration is wrong.
     """
 
-    override = {} if control_url is None else {"control_url": control_url}
-    settings = _load_settings(ctx, agent=override) if override else _load_settings(ctx)
-    if world is None:
-        _start_component("agent", settings, settings.agent, run_agent)
-        return
+    settings = _load_settings(ctx)
     selected = next((w for w in settings.worlds if w.id == world), None)
     if selected is None:
         known = ", ".join(w.id for w in settings.worlds) or "none"
@@ -104,36 +78,6 @@ def agent(
         "component.starting", component="agent", world=world, config=settings.resolved_config()
     )
     raise typer.Exit(code=asyncio.run(run_world(selected, settings.agent)))
-
-
-@app.command()
-def control(
-    ctx: typer.Context,
-    port: Annotated[
-        int | None,
-        typer.Option("--port", help="Override Control's HTTP listen port."),
-    ] = None,
-) -> None:
-    """Start the authoritative Control stub."""
-
-    override = {} if port is None else {"bind_port": port}
-    settings = _load_settings(ctx, control=override) if override else _load_settings(ctx)
-    _start_component("control", settings, settings.control, run_control)
-
-
-@app.command()
-def gateway(
-    ctx: typer.Context,
-    control_url: Annotated[
-        str | None,
-        typer.Option("--control-url", help="Override Control's HTTP URL."),
-    ] = None,
-) -> None:
-    """Start the always-on Gateway stub."""
-
-    override = {} if control_url is None else {"control_url": control_url}
-    settings = _load_settings(ctx, gateway=override) if override else _load_settings(ctx)
-    _start_component("gateway", settings, settings.gateway, run_gateway)
 
 
 def _render_replay_event(event: ReplayEvent) -> list[str]:
@@ -173,7 +117,7 @@ def parse(
             exists=True,
             dir_okay=False,
             readable=True,
-            help="A Valheim dedicated-server log to replay.",
+            help="A dedicated-server log to replay.",
         ),
     ],
     max_players: Annotated[

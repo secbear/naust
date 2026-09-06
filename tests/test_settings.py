@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from naust.agent.config import SinkConfig
 from naust.settings import NaustSettings
 
 
@@ -10,17 +11,17 @@ def test_source_precedence_peels_to_defaults(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("NAUST_CONTROL__BIND_PORT", raising=False)
-    assert NaustSettings().control.bind_port == 8000
+    monkeypatch.delenv("NAUST_LOG_LEVEL", raising=False)
+    assert NaustSettings().log_level == "INFO"
 
-    (tmp_path / "naust.toml").write_text("[control]\nbind_port = 8100\n")
-    assert NaustSettings().control.bind_port == 8100
+    (tmp_path / "naust.toml").write_text('log_level = "DEBUG"\n')
+    assert NaustSettings().log_level == "DEBUG"
 
-    monkeypatch.setenv("NAUST_CONTROL__BIND_PORT", "8200")
-    assert NaustSettings().control.bind_port == 8200
+    monkeypatch.setenv("NAUST_LOG_LEVEL", "WARNING")
+    assert NaustSettings().log_level == "WARNING"
 
-    settings = NaustSettings(control={"bind_port": 8300})
-    assert settings.control.bind_port == 8300
+    settings = NaustSettings(log_level="ERROR")
+    assert settings.log_level == "ERROR"
 
 
 def test_registry_rejects_duplicate_world_ids() -> None:
@@ -29,34 +30,11 @@ def test_registry_rejects_duplicate_world_ids() -> None:
         "name": "Midgard",
         "owner": "friends",
         "mode": "crossplay",
-        "storage_prefix": "worlds/midgard",
     }
-    duplicate = {**world, "storage_prefix": "worlds/other"}
+    duplicate = {**world, "name": "Other"}
 
     with pytest.raises(ValidationError, match="duplicate world id"):
         NaustSettings(worlds=[world, duplicate])
-
-
-def test_registry_rejects_duplicate_storage_prefixes() -> None:
-    worlds = [
-        {
-            "id": "midgard",
-            "name": "Midgard",
-            "owner": "friends",
-            "mode": "crossplay",
-            "storage_prefix": "worlds/shared",
-        },
-        {
-            "id": "yggdrasil",
-            "name": "Yggdrasil",
-            "owner": "friends",
-            "mode": "crossplay",
-            "storage_prefix": "worlds/shared",
-        },
-    ]
-
-    with pytest.raises(ValidationError, match="duplicate storage prefix"):
-        NaustSettings(worlds=worlds)
 
 
 def test_registry_rejects_overlapping_public_ports() -> None:
@@ -67,7 +45,6 @@ def test_registry_rejects_overlapping_public_ports() -> None:
             "owner": "friends",
             "mode": "steam-direct",
             "game_port": 2456,
-            "storage_prefix": "worlds/midgard",
         },
         {
             "id": "yggdrasil",
@@ -75,7 +52,6 @@ def test_registry_rejects_overlapping_public_ports() -> None:
             "owner": "friends",
             "mode": "steam-direct",
             "game_port": 2457,
-            "storage_prefix": "worlds/yggdrasil",
         },
     ]
 
@@ -105,8 +81,6 @@ def test_sink_secrets_are_masked_in_resolved_config(monkeypatch) -> None:
 
 
 def test_sink_requires_exactly_one_url_source(tmp_path) -> None:
-    from naust.agent.config import SinkConfig
-
     with pytest.raises(ValidationError, match="exactly one"):
         SinkConfig(kind="webhook")
     with pytest.raises(ValidationError, match="exactly one"):

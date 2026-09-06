@@ -1,7 +1,11 @@
 # Project 0 boundaries
 
-Status: accepted for Project 0. Revisit only at the project named by each
-decision; do not generalize the skeleton in anticipation of it.
+Status: superseded by [ADR 0004](0004-agent-contract-and-game-boundary.md).
+Kept as the record of the vocabulary that survived: a world's immutable
+`id` beside its display `name`, `owner` as a label, and the networking
+`mode` as a discriminated union. The storage, resource-intent, Control, and
+Gateway boundaries below were removed when Naust became a sidecar behind a
+host contract; persistence and orchestration belong to whoever runs it.
 
 ## Identity
 
