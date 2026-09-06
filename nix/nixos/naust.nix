@@ -126,10 +126,16 @@ let
           +quit
       '';
       afterDrain = pkgs.writeShellScript "naust-${id}-after-drain" ''
-        # Only a verified, successful drain (exit 0) may trigger the hook.
+        # Only a verified, successful drain (exit 0) may trigger the hooks.
+        # The command runs first and to completion; the host is powered off
+        # afterwards, never before, so a backup is never raced by shutdown.
         if [ "''${SERVICE_RESULT:-}" = success ] && [ "''${EXIT_STATUS:-1}" = 0 ]; then
+          ${lib.optionalString (cfg.postDrainCommand != null) ''
+            if ! ( ${cfg.postDrainCommand} ); then
+              echo "naust: postDrainCommand failed for world ${id}" >&2
+            fi
+          ''}
           ${lib.optionalString (cfg.onDrained == "poweroff") "${pkgs.systemd}/bin/systemctl poweroff"}
-          ${lib.optionalString (cfg.postDrainCommand != null) cfg.postDrainCommand}
         fi
       '';
       hookWanted = cfg.onDrained != "none" || cfg.postDrainCommand != null;
