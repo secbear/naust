@@ -23,3 +23,12 @@ Never replace it with a raw runtime capture. Before adding a fixture:
 
 Root `*.log` files are ignored. Only deliberately reviewed fixtures below
 `tests/fixtures/` may be tracked.
+
+`crossplay-session.log` is a sanitized capture of a `-crossplay` start on the
+1.0-eve build (l-0.221.12, network version 36), taken on 2026-09-06 from a
+real host with a working PlayFab plugin. It preserves the PlayFab login and
+registration sequence and the three join-code line shapes: the early line
+whose code is empty, `Session "X" registered with join code NNNNNN`, and the
+periodic `Session "X" with join code NNNNNN and IP ... is active with N
+player(s)`. The IP, PlayFab identities, lobby id, and the join code itself
+are replaced.

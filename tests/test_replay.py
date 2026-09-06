@@ -105,3 +105,19 @@ def test_replay_of_empty_and_garbage_streams_is_clean() -> None:
     assert list(replay([], ValheimObserver(), ValheimResolver(), PresenceTracker())) == []
     garbage = ["", "\x00", "RPC_Disconnect now", "Got character ZDOID from : 0:0", "ᚱᚢᚾᛖᛋ"]
     assert list(replay(garbage, ValheimObserver(), ValheimResolver(), PresenceTracker())) == []
+
+
+CROSSPLAY_FIXTURE = Path(__file__).parent / "fixtures" / "valheim" / "crossplay-session.log"
+
+
+def test_recorded_crossplay_start_yields_the_join_code_once_per_line_shape() -> None:
+    with CROSSPLAY_FIXTURE.open(encoding="utf-8", errors="replace") as lines:
+        events = list(replay(lines, ValheimObserver(), ValheimResolver(), PresenceTracker()))
+
+    joins = _facts(events, JoinInfo)
+    # "registered with join code" and the periodic "is active with" line both
+    # carry the code; the earlier line with an empty code must not.
+    assert joins == [JoinInfo(code="123456"), JoinInfo(code="123456")]
+    assert _facts(events, BackendReady) == [BackendReady()]
+    assert _facts(events, BackendVersion) == [BackendVersion("l-0.221.12")]
+    assert not _facts(events, PlayerJoined)
