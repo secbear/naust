@@ -37,7 +37,7 @@ from naust.agent.supervisor import (
 )
 from naust.agent.surface import Surface
 from naust.domain.world import WorldConfig
-from naust.games.facts import BackendVersion, Fact, JoinInfo, SaveCompleted
+from naust.games.facts import BackendVersion, Fact, JoinInfo, SaveCompleted, SaveFailed
 from naust.games.profile import GameProfile
 from naust.games.registry import get_profile
 
@@ -298,6 +298,10 @@ class WorldRuntime:
                 self._emit(
                     "save.completed", duration_ms=duration_ms, files=self.status.file_sizes()
                 )
+            case SaveFailed(detail=detail):
+                self.status.set_condition("SaveVerified", "False", "SaveFailed")
+                self._sync()
+                self._emit("save.failed", detail=detail, files=self.status.file_sizes())
             case JoinInfo(code=code, address=address, port=port):
                 self.status.join = fact
                 self._sync()

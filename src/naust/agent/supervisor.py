@@ -27,6 +27,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import StrEnum
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import TextIO
 
@@ -39,6 +40,7 @@ from naust.games.facts import (
     Observer,
     Resolver,
     SaveCompleted,
+    SaveFailed,
 )
 
 
@@ -82,12 +84,60 @@ class BackendCommand:
 
 @dataclass(frozen=True, slots=True)
 class SaveFiles:
-    """The files that must exist, and travel, together."""
+    """What must exist, and travel, together.
 
-    paths: tuple[Path, ...]
+    Two layouts, usable at once. ``paths`` are fixed files that must all be
+    present (Valheim before 1.0: the ``.db`` and ``.fwl`` pair). ``directory``
+    with ``patterns`` is a folder the game owns, where every pattern must
+    match at least one file (Valheim 1.0: ``<world>/_main.N.{fwl2,db2,ok}``
+    and chunk files, renumbered on every save).
+    """
+
+    paths: tuple[Path, ...] = ()
+    directory: Path | None = None
+    patterns: tuple[str, ...] = ()
+
+    def resolve(self) -> tuple[Path, ...]:
+        """Every file the layout currently names, fixed ones first."""
+
+        found = list(self.paths)
+        if self.directory is not None and self.directory.is_dir():
+            for pattern in self.patterns:
+                found.extend(sorted(p for p in self.directory.glob(pattern) if p.is_file()))
+        return tuple(found)
+
+    def matching(self, pattern: str) -> tuple[Path, ...]:
+        if self.directory is None or not self.directory.is_dir():
+            return ()
+        return tuple(sorted(p for p in self.directory.glob(pattern) if p.is_file()))
 
     def sizes(self) -> dict[Path, int | None]:
-        return {path: path.stat().st_size if path.exists() else None for path in self.paths}
+        sizes: dict[Path, int | None] = {
+            path: path.stat().st_size if path.exists() else None for path in self.paths
+        }
+        for pattern in self.patterns:
+            for path in self.matching(pattern):
+                sizes[path] = path.stat().st_size
+        return sizes
+
+    def pattern_totals(self, sizes: Mapping[Path, int | None] | None = None) -> dict[str, int]:
+        """Bytes per pattern, from ``sizes`` or from disk."""
+
+        current = self.sizes() if sizes is None else sizes
+        totals: dict[str, int] = {}
+        for pattern in self.patterns:
+            totals[pattern] = sum(
+                size or 0
+                for path, size in current.items()
+                if path not in self.paths and fnmatch(path.name, pattern)
+            )
+        return totals
+
+    def describe(self) -> str:
+        parts = [str(p) for p in self.paths]
+        if self.directory is not None:
+            parts.append(f"{self.directory}/{{{','.join(self.patterns)}}}")
+        return ", ".join(parts)
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +165,7 @@ class DrainOutcome(StrEnum):
     KILLED = "KILLED"
     SAVE_TIMEOUT = "SAVE_TIMEOUT"
     SAVE_NOT_OBSERVED = "SAVE_NOT_OBSERVED"
+    SAVE_FAILED = "SAVE_FAILED"
     VERIFY_FAILED = "VERIFY_FAILED"
 
 
@@ -147,7 +198,11 @@ def verify_save(
 ) -> str | None:
     """Return why the save is not trustworthy, or ``None`` if it is.
 
-    Pure so it can be tested with temporary files and fake clocks.
+    Pure so it can be tested with temporary files and fake clocks. Fixed
+    files must each be present, non-empty, not shrunk, and written after the
+    request. For a directory layout every pattern must have gained at least
+    one non-empty file since the request, and the bytes behind a pattern
+    must not have shrunk far below what was there before.
     """
 
     earliest = requested_at - policy.mtime_tolerance.total_seconds()
@@ -162,6 +217,25 @@ def verify_save(
             return f"{path.name} shrank from {previous} to {stat.st_size} bytes"
         if stat.st_mtime < earliest:
             return f"{path.name} was not written after the save request"
+    if files.directory is not None:
+        if not files.directory.is_dir():
+            return f"{files.directory.name}/ is missing"
+        before = files.pattern_totals(previous_sizes)
+        after = files.pattern_totals()
+        for pattern in files.patterns:
+            fresh = [
+                p
+                for p in files.matching(pattern)
+                if p.stat().st_mtime >= earliest and p.stat().st_size > 0
+            ]
+            if not fresh:
+                return f"no {pattern} in {files.directory.name}/ was written after the save request"
+            previous_total = before.get(pattern, 0)
+            if previous_total and after[pattern] < previous_total * policy.min_size_ratio:
+                return (
+                    f"{pattern} in {files.directory.name}/ shrank from "
+                    f"{previous_total} to {after[pattern]} bytes"
+                )
     return None
 
 
@@ -169,6 +243,8 @@ def verify_save(
 class _Signals:
     ready: asyncio.Event = field(default_factory=asyncio.Event)
     saved: asyncio.Event = field(default_factory=asyncio.Event)
+    save_failed: asyncio.Event = field(default_factory=asyncio.Event)
+    save_failure: str = ""
     eof: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -305,10 +381,16 @@ class BackendSupervisor:
 
         previous_sizes = self.save_files.sizes()
         signals.saved.clear()
+        signals.save_failed.clear()
         requested_at = time.time()
         self._send(self.policy.save_signal)
 
         saved = await self._wait_for_save_or_exit(self.policy.save_timeout)
+        if signals.save_failed.is_set():
+            return self._fail(
+                DrainOutcome.SAVE_FAILED,
+                f"the game reported a failed save: {signals.save_failure}",
+            )
         if saved is None:
             return self._fail(
                 DrainOutcome.SAVE_TIMEOUT,
@@ -379,6 +461,9 @@ class BackendSupervisor:
                 self.last_save_ms = duration_ms
                 self.saves += 1
                 signals.saved.set()
+            case SaveFailed(detail=detail):
+                signals.save_failure = detail
+                signals.save_failed.set()
             case JoinInfo():
                 self.join_info = fact
             case BackendVersion(version=version):
@@ -396,14 +481,20 @@ class BackendSupervisor:
 
         signals = self._require_signals()
         saved = asyncio.create_task(signals.saved.wait())
+        failed = asyncio.create_task(signals.save_failed.wait())
         eof = asyncio.create_task(signals.eof.wait())
         try:
             done, _ = await asyncio.wait(
-                {saved, eof}, timeout=timeout.total_seconds(), return_when=asyncio.FIRST_COMPLETED
+                {saved, failed, eof},
+                timeout=timeout.total_seconds(),
+                return_when=asyncio.FIRST_COMPLETED,
             )
         finally:
             saved.cancel()
+            failed.cancel()
             eof.cancel()
+        if signals.save_failed.is_set():
+            return False
         if signals.saved.is_set():
             return True
         if eof in done:

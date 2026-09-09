@@ -32,3 +32,10 @@ whose code is empty, `Session "X" registered with join code NNNNNN`, and the
 periodic `Session "X" with join code NNNNNN and IP ... is active with N
 player(s)`. The IP, PlayFab identities, lobby id, and the join code itself
 are replaced.
+
+`release-1.0-session.log` is a sanitized capture of the first fresh-world
+start on the 1.0 release build (l-1.0.7, network version 39), taken on
+2026-09-09: world generation, PlayFab registration and join code, then the
+drain with the five-step save that replaced `World saved ( N ms )`. The
+IP, PlayFab identities, lobby and network ids, and the join code are
+replaced.

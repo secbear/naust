@@ -60,11 +60,24 @@ def build_command(world: WorldConfig, launch: BackendLaunchConfig) -> BackendCom
     )
 
 
-def save_files(world: WorldConfig, launch: BackendLaunchConfig) -> SaveFiles:
-    """The ``.db`` and ``.fwl`` pair that must travel together."""
+SAVE_PATTERNS: Final = ("*.fwl2", "*.db2", "*.ok")
+"""What one 1.0 save writes, header first.
 
-    worlds = launch.save_dir / "worlds_local"
-    return SaveFiles((worlds / f"{world.id}.db", worlds / f"{world.id}.fwl"))
+``_main.N.fwl2`` is the world header (name, seed), ``_main.N.db2`` the world
+data, ``_main.N.ok`` the game's own completion marker, all renumbered every
+save; ``*.chunk`` files beside them are rewritten only when dirty, so they are
+backed up with the folder but not required by a save.
+"""
+
+
+def save_files(world: WorldConfig, launch: BackendLaunchConfig) -> SaveFiles:
+    """The world's folder under ``worlds_local``, which must travel whole.
+
+    Before 1.0 a world was the ``<id>.db`` and ``<id>.fwl`` pair in
+    ``worlds_local``; 1.0 (l-1.0.7) moved it into ``worlds_local/<id>/``.
+    """
+
+    return SaveFiles(directory=launch.save_dir / "worlds_local" / world.id, patterns=SAVE_PATTERNS)
 
 
 def drain_policy(launch: BackendLaunchConfig) -> DrainPolicy:

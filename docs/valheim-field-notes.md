@@ -36,15 +36,31 @@ appears about once per session and is not a signal.
 
 ## Saving
 
-`SIGINT` makes the server save and exit; the log reports
-`World saved ( N ms )` first. The world is a pair, `<name>.db` and
-`<name>.fwl`, and they must travel together. The game keeps its own rolling
-backups beside them (`<name>_backup_*`), which are safe to copy mid-session;
-the live pair is not.
+`SIGINT` makes the server save and exit. Before 1.0 the log said
+`World saved ( N ms )` and the world was a pair, `<id>.db` and `<id>.fwl`, in
+`worlds_local/`. From 1.0 (l-1.0.7) the world is a folder,
+`worlds_local/<id>/`, holding `_main.N.fwl2` (header: name and seed),
+`_main.N.db2` (data), `_main.N.ok` (the game's completion marker), and
+`*.chunk` files that are rewritten only when dirty; `N` increases on every
+save. The log reports five steps and ends with
+`World save (5/5) done. Total time [N ms]`. The folder must travel whole.
+
+A world generated but never saved has only `_main.0.fwl2`. The game keeps
+its own rolling backups beside the live world (`-backups`, `-backupshort`,
+`-backuplong`), which are safe to copy mid-session; the live folder is not.
+
+1.0's first start of a pre-1.0 world converts it (`ZNet.LoadOldWorld`), but
+the first save then failed on the host that had `<id>.fwl.old` and
+`<id>_backup_*` files beside the pair: `Error saving world! The file
+'<id>_backup_<date>.fwl' already exists`, the old pair was moved to a backup
+name, and the new folder stayed empty. Naust reports that line as a failed
+save and refuses to call the drain clean. Keep an off-host copy of a
+pre-1.0 world before its first 1.0 start.
 
 ## Versions
 
-`Valheim version: l-0.221.12 (network version 36)` is logged at start. A
+`Valheim version: l-1.0.7 (network version 39)` is logged at start (1.0 day
+was l-1.0.7; the last pre-release build was l-0.221.12, network version 36). A
 client on another version gets a connection failure with no useful message,
 which is the most common "the server is broken" report; surface the version
 wherever status is shown.

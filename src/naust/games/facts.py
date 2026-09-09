@@ -38,6 +38,13 @@ class SaveCompleted:
 
 
 @dataclass(frozen=True, slots=True)
+class SaveFailed:
+    """The game reported that a save did not complete. Its files are suspect."""
+
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
 class JoinInfo:
     """How players reach this backend: a join code, or an address and port."""
 
@@ -56,7 +63,7 @@ class BackendVersion:
 
 
 type PresenceFact = PlayerJoined | PlayerLeft | PlayerCount
-type Fact = PresenceFact | BackendReady | SaveCompleted | JoinInfo | BackendVersion
+type Fact = PresenceFact | BackendReady | SaveCompleted | SaveFailed | JoinInfo | BackendVersion
 
 
 class Observer(Protocol):

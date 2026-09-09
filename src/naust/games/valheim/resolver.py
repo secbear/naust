@@ -19,12 +19,14 @@ from naust.games.facts import (
     PlayerJoined,
     PlayerLeft,
     SaveCompleted,
+    SaveFailed,
 )
 from naust.games.valheim.observer import (
     AbandonedZdoObserved,
     CharacterObserved,
     DisconnectMarkerObserved,
     JoinCodeObserved,
+    SaveFailedObserved,
     ServerReadyObserved,
     SocketClosedObserved,
     VersionObserved,
@@ -64,6 +66,8 @@ class ValheimResolver:
                 return (BackendReady(),)
             case WorldSavedObserved(duration_ms=duration_ms):
                 return (SaveCompleted(duration_ms),)
+            case SaveFailedObserved(detail=detail):
+                return (SaveFailed(detail),)
             case JoinCodeObserved(code=code):
                 return (JoinInfo(code=code),)
             case VersionObserved(version=version):

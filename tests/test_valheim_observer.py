@@ -7,6 +7,7 @@ from naust.games.valheim.observer import (
     CharacterObserved,
     DisconnectMarkerObserved,
     JoinCodeObserved,
+    SaveFailedObserved,
     ServerReadyObserved,
     SocketClosedObserved,
     ValheimObservation,
@@ -86,6 +87,22 @@ def test_noise_yields_no_observation(line: str) -> None:
         (f"{PREFIX}World saved ( 61.499ms )", WorldSavedObserved(duration_ms=61.499)),
         (f"{PREFIX}World saved ( 3216ms )", WorldSavedObserved(duration_ms=3216.0)),
         (
+            f'{PREFIX}Created new join code 654321 for session "Midgard"',
+            JoinCodeObserved(code="654321"),
+        ),
+        (
+            f"{PREFIX}World save (5/5) done. Total time [43ms]",
+            WorldSavedObserved(duration_ms=43.0),
+        ),
+        (
+            f"{PREFIX}Error saving world! The file '/w/midgard_backup_1.fwl' already exists.  "
+            "StackTrace:   at System.IO.FileSystem.LinkOrCopyFile (...)",
+            SaveFailedObserved(
+                detail="The file '/w/midgard_backup_1.fwl' already exists.  StackTrace:   at "
+                "System.IO.FileSystem.LinkOrCopyFile (...)"
+            ),
+        ),
+        (
             f"{PREFIX}Valheim version: l-0.221.12 (network version 36)",
             VersionObserved("l-0.221.12", 36),
         ),
@@ -129,6 +146,8 @@ def test_null_zdoid_is_explicit() -> None:
         f"{PREFIX}Closing socket -1",
         f"{PREFIX}World saved ( ms )",
         f"{PREFIX}World saved ( 61.499 )",
+        f"{PREFIX}World save (4/5) FWL writing done [1ms]",
+        f"{PREFIX}World save (5/5) done. Total time [ms]",
         f"{PREFIX}Game server connected to nothing",
         f"{PREFIX}Valheim version: l-0.221.12",
         f"{PREFIX}Valheim version: (network version 36)",

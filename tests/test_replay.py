@@ -11,7 +11,9 @@ from naust.games.facts import (
     PlayerJoined,
     PlayerLeft,
     SaveCompleted,
+    SaveFailed,
 )
+from naust.games.registry import get_profile
 from naust.games.valheim.observer import CharacterObserved, ValheimObserver
 from naust.games.valheim.resolver import ValheimResolver
 
@@ -121,3 +123,22 @@ def test_recorded_crossplay_start_yields_the_join_code_once_per_line_shape() -> 
     assert _facts(events, BackendReady) == [BackendReady()]
     assert _facts(events, BackendVersion) == [BackendVersion("l-0.221.12")]
     assert not _facts(events, PlayerJoined)
+
+
+RELEASE_FIXTURE = FIXTURE.parent / "release-1.0-session.log"
+
+
+def test_release_1_0_fixture_replays_version_ready_join_code_and_save() -> None:
+    profile = get_profile("valheim")
+    tracker = PresenceTracker()
+    with RELEASE_FIXTURE.open(encoding="utf-8") as lines:
+        events = list(replay(lines, profile.observer(), profile.resolver(), tracker))
+
+    facts = [fact for event in events for fact in event.facts]
+    assert BackendVersion("l-1.0.7") in facts
+    assert BackendReady() in facts
+    assert JoinInfo(code="123456") in facts
+    assert [f for f in facts if isinstance(f, JoinInfo)][-1] == JoinInfo(code="654321")
+    assert SaveCompleted(43.0) in facts
+    assert not any(isinstance(fact, SaveFailed) for fact in facts)
+    assert tracker.count == 0

@@ -140,7 +140,7 @@ Selection happens once, in the composition root, by profile name.
                "quality": "inferred", "idleSince": null},
   "join":     {"kind": "code", "code": "604510"},
   "save":     {"lastCompletedAt": "2026-09-12T03:01:40Z", "lastDurationMs": 61.5,
-               "files": [{"path": "worlds_local/midgard.db", "bytes": 188000000}]},
+               "files": [{"path": "worlds_local/midgard/_main.7.db2", "bytes": 188000000}]},
   "capabilities": {"presence": "inferred", "identity": "name", "save": "signal",
                    "join": "code", "query": null, "version": "log"},
   "game": {"valheim": {"zdoCount": 412390}}

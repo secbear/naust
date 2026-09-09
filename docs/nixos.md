@@ -83,8 +83,8 @@ how anything else, from a status page to an orchestrator, follows along.
 | `settings` | `{}` | merged into `naust.toml`, e.g. `agent.backend.save_timeout = "PT4M"` |
 | `dataDir`, `serverDir`, `saveDir` | `/var/lib/naust`… | Steam root, server install, `-savedir`; state in `dataDir/state` |
 
-World files live in `${saveDir}/worlds_local/<id>.db` and `.fwl`. Back up the
-pair together, after a drain, never during one; `dataDir/state/<id>/last-verified.json`
+World files live in `${saveDir}/worlds_local/<id>/` (Valheim 1.0; before 1.0 they were the `<id>.db` and `.fwl` pair beside it). Back up the
+folder whole, after a drain, never during one; `dataDir/state/<id>/last-verified.json`
 records what the last drain verified, and the agent refuses to start a world
 whose files are half-present or far smaller than that record.
 

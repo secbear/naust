@@ -8,8 +8,12 @@ stdin so tests control timing exactly:
     join NAME OWNER      ->  Got character ZDOID from NAME : OWNER:1
     die NAME             ->  Got character ZDOID from NAME : 0:0
     leave OWNER CONN     ->  RPC_Disconnect / cleanup for OWNER / Closing socket CONN
-    autosave             ->  World saved ( 5.000ms )
+    autosave             ->  World save (5/5) done. Total time [5ms]
     say TEXT             ->  TEXT, verbatim
+
+Saves use the 1.0 layout: ``worlds_local/<world>/_main.N.{fwl2,db2,ok}``,
+renumbered on every save, the previous generation removed the way the game
+moves it to a backup.
 """
 
 import argparse
@@ -30,6 +34,7 @@ BEHAVIOURS = (
     "corrupt-save",
     "ignore-term",
     "slow-save",
+    "fail-save",
 )
 
 
@@ -38,10 +43,15 @@ def emit(message: str) -> None:
 
 
 def write_save(save_dir: Path, world: str, *, corrupt: bool, size: int) -> None:
-    worlds = save_dir / "worlds_local"
-    worlds.mkdir(parents=True, exist_ok=True)
-    (worlds / f"{world}.db").write_bytes(b"" if corrupt else os.urandom(size))
-    (worlds / f"{world}.fwl").write_bytes(b"fwl" * 16)
+    folder = save_dir / "worlds_local" / world
+    folder.mkdir(parents=True, exist_ok=True)
+    generations = sorted(int(p.name.split(".")[1]) for p in folder.glob("_main.*.fwl2"))
+    n = generations[-1] + 1 if generations else 1
+    for previous in folder.glob("_main.*"):
+        previous.unlink()
+    (folder / f"_main.{n}.fwl2").write_bytes(b"fwl2" * 13)
+    (folder / f"_main.{n}.db2").write_bytes(b"" if corrupt else os.urandom(size))
+    (folder / f"_main.{n}.ok").write_bytes(b"ok\n")
 
 
 def main() -> int:
@@ -110,7 +120,7 @@ def main() -> int:
                 emit(f"Closing socket {conn or 1}")
             case "autosave":
                 write_save(args.save_dir, args.world, corrupt=False, size=args.save_size)
-                emit("World saved ( 5.000ms )")
+                emit("World save (5/5) done. Total time [5ms]")
             case "say":
                 print(rest, flush=True)
             case _:
@@ -118,6 +128,9 @@ def main() -> int:
 
     emit("Shutting down")
     if args.behaviour == "no-save":
+        return 0
+    if args.behaviour == "fail-save":
+        emit("Error saving world! The file 'w_backup.fwl' already exists.  StackTrace: ...")
         return 0
     if args.behaviour == "slow-save":
         time.sleep(args.slow_save_seconds)
@@ -127,7 +140,7 @@ def main() -> int:
         corrupt=args.behaviour == "corrupt-save",
         size=args.save_size,
     )
-    emit("World saved ( 61.499ms )")
+    emit("World save (5/5) done. Total time [61.499ms]")
     if args.behaviour == "ignore-term":
         while True:
             time.sleep(3600)

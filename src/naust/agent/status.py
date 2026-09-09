@@ -103,7 +103,7 @@ class AgentStatus:
     def file_sizes(self) -> list[dict[str, Any]]:
         return [
             {"path": str(path), "bytes": path.stat().st_size if path.exists() else None}
-            for path in self.save_files.paths
+            for path in self.save_files.resolve()
         ]
 
     def document(self) -> dict[str, Any]:

@@ -1,6 +1,7 @@
 """The supervisor against a fake backend that can misbehave in every required way."""
 
 import asyncio
+import os
 import signal
 import sys
 import time
@@ -40,8 +41,22 @@ def fake_backend(save_dir: Path, *args: str) -> BackendCommand:
 
 
 def save_files(save_dir: Path, world: str = "testworld") -> SaveFiles:
+    """The 1.0 layout the fake backend writes."""
+
+    return SaveFiles(
+        directory=save_dir / "worlds_local" / world, patterns=("*.fwl2", "*.db2", "*.ok")
+    )
+
+
+def pair(save_dir: Path, world: str = "testworld") -> SaveFiles:
+    """The pre-1.0 pair, for the pure verification tests."""
+
     worlds = save_dir / "worlds_local"
     return SaveFiles((worlds / f"{world}.db", worlds / f"{world}.fwl"))
+
+
+def newest_db2(save_dir: Path) -> Path:
+    return save_files(save_dir).matching("*.db2")[-1]
 
 
 def supervisor(tmp_path: Path, *args: str, **kwargs) -> BackendSupervisor:
@@ -198,7 +213,7 @@ async def test_clean_drain_saves_verifies_and_stops(tmp_path: Path) -> None:
     await sup.wait_ready(READY_TIMEOUT)
     await sup.write_stdin("autosave\n")
     await until(lambda: sup.last_save_ms is not None)
-    first_mtime = save_files(tmp_path).paths[0].stat().st_mtime
+    first_generation = newest_db2(tmp_path).name
 
     report = await sup.drain()
 
@@ -207,7 +222,7 @@ async def test_clean_drain_saves_verifies_and_stops(tmp_path: Path) -> None:
     assert report.exit_code == 0
     assert sup.state is BackendState.STOPPED
     assert sup.last_save_ms == 61.499
-    assert save_files(tmp_path).paths[0].stat().st_mtime >= first_mtime
+    assert newest_db2(tmp_path).name != first_generation, "the drain wrote a new generation"
     assert not sup.alive
 
 
@@ -221,8 +236,9 @@ async def test_drain_kills_only_after_verified_save(tmp_path: Path) -> None:
     assert report.outcome is DrainOutcome.KILLED
     assert report.succeeded
     assert report.exit_code == -signal.SIGKILL
-    for path in save_files(tmp_path).paths:
-        assert path.stat().st_size > 0
+    written = save_files(tmp_path).resolve()
+    assert len(written) == 3
+    assert all(path.stat().st_size > 0 for path in written)
 
 
 async def test_save_timeout_leaves_backend_running(tmp_path: Path) -> None:
@@ -236,7 +252,7 @@ async def test_save_timeout_leaves_backend_running(tmp_path: Path) -> None:
     assert not report.succeeded
     assert sup.state is BackendState.FAILED
     assert sup.alive, "a hung backend must not be killed without a verified save"
-    assert not save_files(tmp_path).paths[0].exists()
+    assert not save_files(tmp_path).resolve()
     await sup.terminate()
 
 
@@ -246,13 +262,13 @@ async def test_exit_without_save_is_a_failure_and_discards_nothing(tmp_path: Pat
     await sup.wait_ready(READY_TIMEOUT)
     await sup.write_stdin("autosave\n")
     await until(lambda: sup.last_save_ms is not None)
-    before = {p: p.read_bytes() for p in save_files(tmp_path).paths}
+    before = {p: p.read_bytes() for p in save_files(tmp_path).resolve()}
 
     report = await sup.drain()
 
     assert report.outcome is DrainOutcome.SAVE_NOT_OBSERVED
     assert report.exit_code == 0
-    assert {p: p.read_bytes() for p in save_files(tmp_path).paths} == before
+    assert {p: p.read_bytes() for p in save_files(tmp_path).resolve()} == before
 
 
 async def test_corrupt_save_fails_verification(tmp_path: Path) -> None:
@@ -263,7 +279,7 @@ async def test_corrupt_save_fails_verification(tmp_path: Path) -> None:
     report = await sup.drain()
 
     assert report.outcome is DrainOutcome.VERIFY_FAILED
-    assert "is empty" in report.detail
+    assert "*.db2" in report.detail
     assert sup.state is BackendState.FAILED
 
 
@@ -272,8 +288,7 @@ async def test_shrunken_save_fails_verification(tmp_path: Path) -> None:
     await sup.start()
     await sup.wait_ready(READY_TIMEOUT)
     # A previous, much larger save exists on disk.
-    save_files(tmp_path).paths[0].parent.mkdir(parents=True, exist_ok=True)
-    save_files(tmp_path).paths[0].write_bytes(b"x" * 100_000)
+    write_generation(tmp_path / "worlds_local" / "testworld", 1, db_bytes=100_000)
 
     report = await sup.drain()
 
@@ -300,7 +315,7 @@ def _write(path: Path, size: int) -> None:
 
 
 def test_verify_save_accepts_fresh_complete_files(tmp_path: Path) -> None:
-    files = save_files(tmp_path)
+    files = pair(tmp_path)
     requested_at = time.time()
     for path in files.paths:
         _write(path, 1000)
@@ -317,7 +332,7 @@ def test_verify_save_accepts_fresh_complete_files(tmp_path: Path) -> None:
     ],
 )
 def test_verify_save_rejects(tmp_path: Path, setup, expected: str) -> None:
-    files = save_files(tmp_path)
+    files = pair(tmp_path)
     requested_at = time.time()
     setup(files)
 
@@ -328,7 +343,7 @@ def test_verify_save_rejects(tmp_path: Path, setup, expected: str) -> None:
 
 
 def test_verify_save_rejects_stale_files(tmp_path: Path) -> None:
-    files = save_files(tmp_path)
+    files = pair(tmp_path)
     for path in files.paths:
         _write(path, 1000)
     requested_at = time.time() + 60
@@ -340,7 +355,7 @@ def test_verify_save_rejects_stale_files(tmp_path: Path) -> None:
 
 
 def test_verify_save_ignores_ratio_without_previous(tmp_path: Path) -> None:
-    files = save_files(tmp_path)
+    files = pair(tmp_path)
     for path in files.paths:
         _write(path, 1)
 
@@ -365,9 +380,81 @@ async def test_drain_signals_the_game_through_a_wrapper(tmp_path: Path) -> None:
     report = await sup.drain()
 
     assert report.outcome is DrainOutcome.STOPPED, report
-    assert save_files(tmp_path).paths[0].stat().st_size > 0
+    assert all(p.stat().st_size > 0 for p in save_files(tmp_path).resolve())
 
 
 def test_wrapping_is_a_no_op_without_a_wrapper(tmp_path: Path) -> None:
     command = fake_backend(tmp_path)
     assert command.wrapped(()) is command
+
+
+async def test_reported_save_failure_fails_the_drain_at_once(tmp_path: Path) -> None:
+    sup = supervisor(tmp_path, "--behaviour", "fail-save")
+    await sup.start()
+    await sup.wait_ready(READY_TIMEOUT)
+    await sup.write_stdin("autosave\n")
+    await until(lambda: sup.last_save_ms is not None)
+    before = {p: p.read_bytes() for p in save_files(tmp_path).resolve()}
+
+    report = await sup.drain()
+
+    assert report.outcome is DrainOutcome.SAVE_FAILED
+    assert "already exists" in report.detail
+    assert {p: p.read_bytes() for p in save_files(tmp_path).resolve()} == before
+
+
+# ---- directory layouts (Valheim 1.0) ---------------------------------------
+
+
+def folder(tmp_path: Path) -> SaveFiles:
+    return SaveFiles(
+        directory=tmp_path / "worlds_local" / "w", patterns=("*.fwl2", "*.db2", "*.ok")
+    )
+
+
+def write_generation(
+    directory: Path, n: int, db_bytes: int = 1000, mtime: float | None = None
+) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    for suffix, size in (("fwl2", 52), ("db2", db_bytes), ("ok", 4)):
+        path = directory / f"_main.{n}.{suffix}"
+        path.write_bytes(b"x" * size)
+        if mtime is not None:
+            os.utime(path, (mtime, mtime))
+
+
+def test_folder_save_verifies_when_every_pattern_is_rewritten(tmp_path: Path) -> None:
+    f = folder(tmp_path)
+    write_generation(f.directory, 1, mtime=time.time() - 3600)
+    previous = f.sizes()
+    requested = time.time() - 1
+    write_generation(f.directory, 2)
+
+    assert verify_save(f, previous, requested, FAST) is None
+    assert [p.name for p in f.resolve()] == [
+        "_main.1.fwl2",
+        "_main.2.fwl2",
+        "_main.1.db2",
+        "_main.2.db2",
+        "_main.1.ok",
+        "_main.2.ok",
+    ]
+
+
+def test_folder_save_rejects_missing_folder_stale_files_and_shrinkage(tmp_path: Path) -> None:
+    f = folder(tmp_path)
+    requested = time.time() - 1
+
+    problem = verify_save(f, {}, requested, FAST)
+    assert problem is not None and "w/ is missing" in problem
+
+    write_generation(f.directory, 1, mtime=time.time() - 3600)
+    problem = verify_save(f, f.sizes(), requested, FAST)
+    assert problem is not None and "*.fwl2" in problem and "after the save request" in problem
+
+    previous = f.sizes()
+    for p in f.resolve():
+        p.unlink()
+    write_generation(f.directory, 2, db_bytes=100)
+    problem = verify_save(f, previous, requested, FAST)
+    assert problem is not None and "*.db2" in problem and "shrank" in problem

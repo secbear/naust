@@ -78,8 +78,9 @@ async def test_empty_world_drains_on_idle_timeout(tmp_path: Path) -> None:
     )
 
     assert code == EXIT_OK
-    for path in files.paths:
-        assert path.stat().st_size > 0
+    written = files.resolve()
+    assert len(written) == 3
+    assert all(path.stat().st_size > 0 for path in written)
     marker = tmp_path / "state" / "testworld" / "last-verified.json"
     assert marker.exists()
 
@@ -101,15 +102,16 @@ async def test_raw_log_captures_every_backend_line(tmp_path: Path) -> None:
     [log] = list((tmp_path / "logs").glob("testworld-*.log"))
     text = log.read_text()
     assert "Game server connected" in text
-    assert "World saved" in text
+    assert "World save (5/5)" in text
     assert log.name.endswith("Z.log")
 
 
 async def test_half_present_world_is_refused_before_start(tmp_path: Path) -> None:
     w = world()
     files = valheim.save_files(w, config(tmp_path).backend)
-    files.paths[0].parent.mkdir(parents=True)
-    files.paths[0].write_bytes(b"only the db")
+    assert files.directory is not None
+    files.directory.mkdir(parents=True)
+    (files.directory / "_main.1.db2").write_bytes(b"data without its header")
 
     code = await run_world(
         w,
@@ -121,7 +123,7 @@ async def test_half_present_world_is_refused_before_start(tmp_path: Path) -> Non
     )
 
     assert code == EXIT_FAILED
-    assert not files.paths[1].exists(), "nothing was started, nothing was written"
+    assert not files.matching("*.fwl2"), "nothing was started, nothing was written"
 
 
 async def test_operator_stop_drains_immediately(tmp_path: Path) -> None:
@@ -149,7 +151,7 @@ async def test_operator_stop_drains_immediately(tmp_path: Path) -> None:
 
     await requester
     assert code == EXIT_OK
-    assert files.paths[0].exists()
+    assert files.matching("*.db2")
 
 
 async def test_startup_failure_exits_nonzero(tmp_path: Path) -> None:
@@ -298,10 +300,9 @@ def test_build_command_requires_executable() -> None:
 def test_save_files_follow_savedir_layout(tmp_path: Path) -> None:
     files = valheim.save_files(world(), BackendLaunchConfig(save_dir=tmp_path))
 
-    assert files.paths == (
-        tmp_path / "worlds_local" / "testworld.db",
-        tmp_path / "worlds_local" / "testworld.fwl",
-    )
+    assert files.paths == ()
+    assert files.directory == tmp_path / "worlds_local" / "testworld"
+    assert files.patterns == ("*.fwl2", "*.db2", "*.ok")
 
 
 def test_drain_policy_comes_from_launch_config() -> None:

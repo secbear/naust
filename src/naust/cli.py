@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from naust.agent.presence import PresenceTracker
 from naust.agent.replay import ReplayEvent, replay
 from naust.agent.service import run_world
-from naust.games.facts import BackendReady, BackendVersion, JoinInfo, SaveCompleted
+from naust.games.facts import BackendReady, BackendVersion, JoinInfo, SaveCompleted, SaveFailed
 from naust.games.registry import get_profile
 from naust.log import LogLevel, setup_logging
 from naust.settings import NaustSettings
@@ -94,6 +94,8 @@ def _render_replay_event(event: ReplayEvent) -> list[str]:
             case SaveCompleted(duration_ms=duration_ms):
                 shown = "?" if duration_ms is None else f"{duration_ms:.3f}ms"
                 lines.append(f"{prefix}  saved {shown}")
+            case SaveFailed(detail=detail):
+                lines.append(f"{prefix}  save-failed {detail}")
             case JoinInfo(code=code) if code is not None:
                 lines.append(f"{prefix}  join-code {code}")
             case _:
