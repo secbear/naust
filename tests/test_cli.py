@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,15 @@ from typer.testing import CliRunner
 from naust.cli import app
 
 runner = CliRunner()
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def plain(output: str) -> str:
+    """Typer's error boxes carry colour codes and wrapped lines on a terminal."""
+
+    text = _ANSI.sub("", output).replace("│", " ").replace("\n", " ")
+    return re.sub(r"\s+", " ", text)
 
 
 def test_help_lists_the_two_commands() -> None:
@@ -20,7 +30,7 @@ def test_agent_requires_a_world() -> None:
     result = runner.invoke(app, ["agent"])
 
     assert result.exit_code == 2
-    assert "--world" in result.output
+    assert "--world" in plain(result.output)
 
 
 def test_invalid_configuration_is_a_clean_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -29,7 +39,7 @@ def test_invalid_configuration_is_a_clean_error(monkeypatch: pytest.MonkeyPatch)
     result = runner.invoke(app, ["agent", "--world", "midgard"])
 
     assert result.exit_code == 2
-    assert "agent.backend.max_players" in result.output
+    assert "agent.backend.max_players" in plain(result.output)
     assert "Traceback" not in result.output
 
 
