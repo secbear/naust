@@ -1,0 +1,61 @@
+09/29/2026 17:41:32: Game server connected
+09/29/2026 17:43:58: Got handshake from client playfab/0000000000000A01
+09/29/2026 17:45:05: Got character ZDOID from PLAYER_A : -900000000000000011:1
+09/29/2026 17:51:32:  Connections 1 ZDOS:104210  sent:120 recv:410
+09/29/2026 18:10:26: Got handshake from client playfab/0000000000000B02
+09/29/2026 18:10:49: Got character ZDOID from PLAYER_B : -900000000000000013:4
+09/29/2026 18:35:09: PlayFab network error in session 'Midgard' and network REDACTED with type 'Error' and code '63': failed to establish or maintain a connection to a network or remote peer
+09/29/2026 18:35:09: PlayFab host fast recovery
+09/29/2026 18:35:09: Keep socket for playfab/0000000000000A01, try to reconnect before timeout
+09/29/2026 18:35:09: Player connection lost server "Midgard" that has join code 123456, now 2 player(s)
+09/29/2026 18:35:09: Keep socket for playfab/0000000000000B02, try to reconnect before timeout
+09/29/2026 18:35:09: Player connection lost server "Midgard" that has join code 123456, now 2 player(s)
+ResetParty
+Task: LeaveNetworkTask
+Task: CleanPartyTask
+Task: InitPartyTask()
+Task: JoinPartyTask
+09/29/2026 18:35:09: Failed to send, suspend TX on playfab/0000000000000A01 while trying to reconnect
+09/29/2026 18:35:09: Failed to send, suspend TX on playfab/0000000000000B02 while trying to reconnect
+09/29/2026 18:35:10: Joined PlayFab Party network with ID "REDACTED"
+09/29/2026 18:35:10: Resume TX on playfab/0000000000000B02
+09/29/2026 18:35:10: Player joined server "Midgard" that has join code 123456, now 2 player(s)
+09/29/2026 18:36:18: Resume TX on playfab/0000000000000A01
+09/29/2026 18:36:18: Player joined server "Midgard" that has join code 123456, now 2 player(s)
+09/29/2026 18:39:25: Got character ZDOID from PLAYER_B : 0:0
+09/29/2026 18:39:33: Got character ZDOID from PLAYER_B : -900000000000000013:5385
+09/29/2026 18:41:32:  Connections 2 ZDOS:112487  sent:0 recv:770
+09/29/2026 19:13:55: Connections 4
+09/29/2026 19:17:05: Got character ZDOID from PLAYER_A : 0:0
+09/29/2026 19:17:14: Got character ZDOID from PLAYER_A : -900000000000000011:7035
+09/29/2026 19:21:32:  Connections 2 ZDOS:118851  sent:190 recv:360
+09/29/2026 19:26:06: Keep socket for playfab/0000000000000B02, try to reconnect before timeout
+09/29/2026 19:26:06: Player connection lost server "Midgard" that has join code 123456, now 2 player(s)
+09/29/2026 19:26:06: PlayFab network error in session 'Midgard' and network REDACTED with type 'Error' and code '63': failed to establish or maintain a connection to a network or remote peer
+09/29/2026 19:26:06: Failed to send, suspend TX on playfab/0000000000000B02 while trying to reconnect
+09/29/2026 19:26:08: Keep socket for playfab/0000000000000A01, try to reconnect before timeout
+09/29/2026 19:26:08: Player connection lost server "Midgard" that has join code 123456, now 2 player(s)
+09/29/2026 19:26:08: PlayFab network error in session 'Midgard' and network REDACTED with type 'Error' and code '63': failed to establish or maintain a connection to a network or remote peer
+09/29/2026 19:26:08: Failed to send, suspend TX on playfab/0000000000000A01 while trying to reconnect
+ResetParty
+Task: LeaveNetworkTask
+Task: CleanPartyTask
+Task: InitPartyTask()
+Task: JoinPartyTask
+09/29/2026 19:26:27: Joined PlayFab Party network with ID "REDACTED"
+09/29/2026 19:27:35: ZRpc timeout detected
+ZPlayFabSocket::Dispose. State: CONNECTED
+ZPlayFabSocket::Dispose. leave lobby. LobbyId:
+09/29/2026 19:27:35: Destroying abandoned non persistent zdo -900000000000000013:5385 owner -900000000000000013
+09/29/2026 19:27:35: Destroying abandoned non persistent zdo -900000000000000013:13118 owner -900000000000000013
+09/29/2026 19:27:35: Destroying abandoned non persistent zdo -900000000000000013:13120 owner -900000000000000013
+09/29/2026 19:27:35: Destroying abandoned non persistent zdo -900000000000000013:13119 owner -900000000000000013
+ZPlayFabSocket::Dispose. State: CLOSED
+ZPlayFabSocket::Dispose. State: CLOSED
+09/29/2026 19:27:37: ZRpc timeout detected
+ZPlayFabSocket::Dispose. State: CONNECTED
+ZPlayFabSocket::Dispose. leave lobby. LobbyId:
+09/29/2026 19:27:37: Destroying abandoned non persistent zdo -900000000000000011:7035 owner -900000000000000011
+ZPlayFabSocket::Dispose. State: CLOSED
+09/29/2026 19:31:32:  Connections 0 ZDOS:118834  sent:0 recv:0
+09/29/2026 19:41:32:  Connections 0 ZDOS:118834  sent:0 recv:0

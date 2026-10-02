@@ -67,9 +67,10 @@ one systemd unit to a fleet controller without a message bus in between.
 ```
 
 The observer knows a game's syntax. The resolver knows a game's semantics,
-including the ugly parts: Valheim's identity-free disconnect marker that only
-later cleanup lines can attribute to a player lives in Valheim's resolver, not
-in the tracker. The tracker knows only sets. Adding a game adds an observer, a
+including the ugly parts: Valheim never says who left, and the cleanup lines
+that name a departed owner, and the server's own peer count that names
+everybody when it is zero, are interpreted in Valheim's resolver, not in the
+tracker. The tracker knows only sets. Adding a game adds an observer, a
 resolver, a profile, and a fixture; it touches nothing else, and that is the
 test the abstraction is held to.
 

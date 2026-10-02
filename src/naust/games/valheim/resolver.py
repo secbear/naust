@@ -1,10 +1,17 @@
 """Valheim's grammar of arriving and leaving, turned into game-neutral facts.
 
-The server never says "X left". It emits an identity-free ``RPC_Disconnect``,
-then cleanup lines naming the departed *owner*, then closes the socket. A
-failed login emits the same marker with no cleanup. The resolver keeps the
-name-to-owner map and the open disconnect window that make attribution
-possible, so the generic tracker never has to.
+The server never says "X left". Every way a peer goes (a clean quit's
+``RPC_Disconnect``, a dropped connection's ``ZRpc timeout detected``, a kick)
+ends in the same removal, and the removal sweeps away every non-persistent
+object whose owner is no longer connected, logging each with that owner.
+The sweep runs only when a peer is removed and only touches owners that are
+gone, so a cleanup line naming a present player's owner is the game's own
+statement that the player left, whatever preceded it. The resolver keeps the
+name-to-owner map that makes that attribution possible.
+
+Ten-minutely, the server also logs how many handshaken peers it has. Zero
+names everybody: the server is empty. Any other number names nobody, so it
+only matters when no names are known (the agent started mid-session).
 
 Policy: fail awake. When evidence is incomplete nobody is removed.
 """
@@ -16,6 +23,7 @@ from naust.games.facts import (
     BackendVersion,
     Fact,
     JoinInfo,
+    PlayerCount,
     PlayerJoined,
     PlayerLeft,
     SaveCompleted,
@@ -24,25 +32,18 @@ from naust.games.facts import (
 from naust.games.valheim.observer import (
     AbandonedZdoObserved,
     CharacterObserved,
-    DisconnectMarkerObserved,
     JoinCodeObserved,
+    PeerCountObserved,
     SaveFailedObserved,
     ServerReadyObserved,
-    SocketClosedObserved,
     VersionObserved,
     WorldSavedObserved,
 )
 
 
 @dataclass(slots=True)
-class _PendingDisconnect:
-    resolved_owner: int | None = None
-
-
-@dataclass(slots=True)
 class ValheimResolver:
     _owners_by_name: dict[str, int] = field(default_factory=dict)
-    _pending: _PendingDisconnect | None = None
 
     def resolve(self, observation: object) -> tuple[Fact, ...]:
         match observation:
@@ -54,14 +55,14 @@ class ValheimResolver:
                     return ()
                 self._owners_by_name[name] = zdoid.owner
                 return (PlayerJoined(name),)
-            case DisconnectMarkerObserved():
-                self._pending = _PendingDisconnect()
-                return ()
             case AbandonedZdoObserved(owner=owner):
-                return self._attribute(owner)
-            case SocketClosedObserved():
-                self._pending = None
-                return ()
+                return self._departed(owner)
+            case PeerCountObserved(count=0):
+                gone = sorted(self._owners_by_name)
+                self._owners_by_name.clear()
+                return (*(PlayerLeft(name) for name in gone), PlayerCount(0))
+            case PeerCountObserved(count=count):
+                return (PlayerCount(count),)
             case ServerReadyObserved():
                 return (BackendReady(),)
             case WorldSavedObserved(duration_ms=duration_ms):
@@ -75,13 +76,11 @@ class ValheimResolver:
             case _:
                 return ()
 
-    def _attribute(self, owner: int) -> tuple[Fact, ...]:
-        pending = self._pending
-        if pending is None or pending.resolved_owner is not None:
-            return ()
+    def _departed(self, owner: int) -> tuple[Fact, ...]:
         for name, known_owner in self._owners_by_name.items():
             if known_owner == owner:
                 del self._owners_by_name[name]
-                pending.resolved_owner = owner
                 return (PlayerLeft(name),)
-        return ()  # unknown owner: mid-stream start or failed login; never guess
+        # Unowned (0), a stranger (mid-stream start or failed login), or a player
+        # already counted out by an earlier line of the same sweep: never guess.
+        return ()

@@ -5,11 +5,10 @@ import pytest
 from naust.games.valheim.observer import (
     AbandonedZdoObserved,
     CharacterObserved,
-    DisconnectMarkerObserved,
     JoinCodeObserved,
+    PeerCountObserved,
     SaveFailedObserved,
     ServerReadyObserved,
-    SocketClosedObserved,
     ValheimObservation,
     ValheimObserver,
     VersionObserved,
@@ -32,8 +31,16 @@ PREFIX = "01/01/2026 23:10:38: "
         f"{PREFIX}Got connection SteamID 900000000000000007",
         f"{PREFIX}Network version check, their:36, mine:36",
         f"{PREFIX}Server: New peer connected,sending global keys",
-        f"{PREFIX} Connections 0 ZDOS:16260  sent:0 recv:0",
         f"{PREFIX}World save writing starting",
+        # What precedes a removal varies and names nobody; the cleanup that follows decides.
+        f"{PREFIX}RPC_Disconnect",
+        f"{PREFIX}ZRpc timeout detected",
+        f"{PREFIX}Closing socket 900000000000000008",
+        # PlayFab's own count lags: it still says 2 after both players dropped.
+        f'{PREFIX}Player connection lost server "Midgard" that has join code 123456, '
+        "now 2 player(s)",
+        # Dungeon generation: room joints, not players.
+        f"{PREFIX}Connections 4",
         f"{PREFIX}Console: Valheim l-0.221.12 (network version 36)",
         "Initialize engine version: 6000.0.61f1 (74a0adb02c31)",
         "ZPlayFabMatchmaking::UnregisterServer - unregistering server now.",
@@ -68,7 +75,6 @@ def test_noise_yields_no_observation(line: str) -> None:
             "Got character ZDOID from NoPrefix : 5:7",
             CharacterObserved("NoPrefix", ZdoId(5, 7)),
         ),
-        (f"{PREFIX}RPC_Disconnect", DisconnectMarkerObserved()),
         (
             f"{PREFIX}Destroying abandoned non persistent zdo 900000000000000012:43 "
             "owner 900000000000000012",
@@ -79,10 +85,8 @@ def test_noise_yields_no_observation(line: str) -> None:
             "owner -900000000000000011",
             AbandonedZdoObserved(ZdoId(-900000000000000011, 195), owner=-900000000000000011),
         ),
-        (
-            f"{PREFIX}Closing socket 900000000000000008",
-            SocketClosedObserved(connection_id=900000000000000008),
-        ),
+        (f"{PREFIX} Connections 0 ZDOS:16260  sent:0 recv:0", PeerCountObserved(0)),
+        (f"{PREFIX} Connections 2 ZDOS:118851  sent:190 recv:360", PeerCountObserved(2)),
         (f"{PREFIX}Game server connected", ServerReadyObserved()),
         (f"{PREFIX}World saved ( 61.499ms )", WorldSavedObserved(duration_ms=61.499)),
         (f"{PREFIX}World saved ( 3216ms )", WorldSavedObserved(duration_ms=3216.0)),
@@ -138,12 +142,11 @@ def test_null_zdoid_is_explicit() -> None:
         f"{PREFIX}Got character ZDOID from PLAYER_A : 5:7 trailing",
         f"{PREFIX}Got character ZDOID from PLAYER_A :",
         f"{PREFIX}Got character ZDOID fro",
-        f"{PREFIX}RPC_Disconnec",
-        f"{PREFIX}RPC_Disconnected",
         f"{PREFIX}Destroying abandoned non persistent zdo 9:43 owner",
         f"{PREFIX}Destroying abandoned non persistent zdo 9:43 owner x",
-        f"{PREFIX}Closing socket",
-        f"{PREFIX}Closing socket -1",
+        f"{PREFIX} Connections -1 ZDOS:16260  sent:0 recv:0",
+        f"{PREFIX} Connections 2 ZDOS:",
+        f"{PREFIX} Connections two ZDOS:16260  sent:0 recv:0",
         f"{PREFIX}World saved ( ms )",
         f"{PREFIX}World saved ( 61.499 )",
         f"{PREFIX}World save (4/5) FWL writing done [1ms]",

@@ -160,6 +160,28 @@ async def test_output_feeds_presence_and_callbacks(tmp_path: Path) -> None:
     await sup.drain()
 
 
+async def test_lost_connections_and_an_empty_server_end_presence(tmp_path: Path) -> None:
+    """Crossplay players who drop never send RPC_Disconnect."""
+
+    transitions: list[PresenceTransition] = []
+    sup = supervisor(tmp_path, on_transition=transitions.append)
+    await sup.start()
+    await sup.wait_ready(READY_TIMEOUT)
+
+    await sup.write_stdin("join Alice 5\njoin Bob 6\n")
+    await until(lambda: sup.tracker.count == 2)
+    await sup.write_stdin("drop 6\n")
+    await until(lambda: sup.tracker.count == 1)
+    await sup.write_stdin("peers 1\n")  # names nobody: Alice stays
+    await sup.write_stdin("peers 0\n")  # names everybody
+    await until(lambda: sup.tracker.count == 0)
+
+    assert [t.count for t in transitions] == [1, 2, 1, 0]
+    assert transitions[2].left == {"Bob"}
+    assert transitions[3].left == {"Alice"}
+    await sup.drain()
+
+
 async def test_facts_are_recorded_and_reported(tmp_path: Path) -> None:
     facts: list = []
     sup = supervisor(tmp_path, on_fact=facts.append)

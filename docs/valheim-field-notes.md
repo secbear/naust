@@ -29,10 +29,27 @@ before the world is announced ready.
 
 There is no RCON, no query port under crossplay, and no player list. The
 server logs a `Got character ZDOID from <name> : <owner>:<object>` line on
-spawn and respawn, an identity-free `RPC_Disconnect`, then cleanup lines
-naming the departed owner, then `Closing socket`. ADR 0002 records how those
-become joins and leaves without guessing. The `Connections N ZDOS` line
-appears about once per session and is not a signal.
+spawn and respawn. Nothing says who left. What precedes a departure depends
+on how it happened: `RPC_Disconnect` for a clean quit, `ZRpc timeout
+detected` for a dropped connection (common under crossplay, where PlayFab
+first holds the socket open hoping the player comes back), `Kicking <name>`
+for a kick. All of them end in the same removal, which sweeps every
+non-persistent object whose owner is no longer connected and logs each one
+as `Destroying abandoned non persistent zdo <id> owner <owner>`. That line
+is the departure; ADR 0005 records why it is enough on its own.
+
+Every ten minutes the server also logs ` Connections N ZDOS:… sent:… recv:…`,
+where N is the number of peers past the handshake. Zero means nobody is
+there, whatever the agent thought. Dungeon generation logs a bare
+`Connections N` (room joints), which is not a count of anything useful.
+PlayFab's `Player connection lost … now N player(s)` lags and is not a count
+either: it said 2 after both players of a two-player session had dropped.
+
+Getting this wrong is expensive in exactly one direction. On 2026-09-29 both
+players of a crossplay session dropped by timeout; the agent, which then
+attributed leaves only after `RPC_Disconnect`, counted them present for two
+days while the server logged `Connections 0` every ten minutes. The sanitized
+excerpt is `tests/fixtures/valheim/crossplay-timeout.log`.
 
 ## Saving
 

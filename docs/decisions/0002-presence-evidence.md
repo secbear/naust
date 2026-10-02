@@ -1,8 +1,9 @@
 # Presence evidence and the fail-awake policy
 
 Status: accepted for Project 1; amended by ADR 0004, which moves the
-disconnect correlation from the generic tracker into Valheim's resolver. The
-rules below are unchanged; only their home moved.
+disconnect correlation from the generic tracker into Valheim's resolver, and
+by ADR 0005, which replaces the correlation window with the cleanup line
+alone and adds the server's peer count. Fail awake stands.
 
 ## Question
 

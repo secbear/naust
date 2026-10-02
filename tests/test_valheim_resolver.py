@@ -6,6 +6,7 @@ from naust.games.facts import (
     BackendReady,
     BackendVersion,
     JoinInfo,
+    PlayerCount,
     PlayerJoined,
     PlayerLeft,
     SaveCompleted,
@@ -13,10 +14,9 @@ from naust.games.facts import (
 from naust.games.valheim.observer import (
     AbandonedZdoObserved,
     CharacterObserved,
-    DisconnectMarkerObserved,
     JoinCodeObserved,
+    PeerCountObserved,
     ServerReadyObserved,
-    SocketClosedObserved,
     VersionObserved,
     WorldSavedObserved,
     ZdoId,
@@ -39,15 +39,11 @@ def cleanup(owner: int, object_id: int = 43) -> AbandonedZdoObserved:
     return AbandonedZdoObserved(ZdoId(owner, object_id), owner=owner)
 
 
-def leave(resolver: ValheimResolver, owner: int, connection_id: int = 1) -> list:
+def sweep(resolver: ValheimResolver, owner: int, *object_ids: int) -> list:
+    """The removal sweep for one departed owner: several cleanup lines."""
     facts: list = []
-    for observation in (
-        DisconnectMarkerObserved(),
-        cleanup(owner, 43),
-        cleanup(owner, 42),
-        SocketClosedObserved(connection_id),
-    ):
-        facts.extend(resolver.resolve(observation))
+    for object_id in object_ids or (43, 42):
+        facts.extend(resolver.resolve(cleanup(owner, object_id)))
     return facts
 
 
@@ -63,50 +59,48 @@ def test_death_and_respawn_are_silent() -> None:
     assert resolver.resolve(join("PLAYER_B", B_OWNER, 3)) == ()
 
 
-def test_disconnect_with_cleanup_resolves_exactly_one_leave() -> None:
+def test_cleanup_of_a_present_owner_is_exactly_one_leave() -> None:
+    """Quit, timeout, or kick: every removal ends in this sweep, and it only
+    touches owners who are no longer connected."""
+
     resolver = ValheimResolver()
     resolver.resolve(join("PLAYER_A", A_OWNER))
     resolver.resolve(join("PLAYER_B", B_OWNER))
 
-    assert leave(resolver, B_OWNER) == [PlayerLeft("PLAYER_B")]
+    assert sweep(resolver, B_OWNER, 43, 42, 32, 40) == [PlayerLeft("PLAYER_B")]
 
 
-def test_failed_login_cannot_evict_a_player() -> None:
-    """The dangerous naive rule: 'on RPC_Disconnect, remove someone'."""
+def test_two_timeouts_back_to_back_are_two_leaves() -> None:
+    """The 2026-09-29 incident: both crossplay players dropped two seconds
+    apart and neither removal was preceded by RPC_Disconnect."""
+
+    resolver = ValheimResolver()
+    resolver.resolve(join("PLAYER_A", A_OWNER))
+    resolver.resolve(join("PLAYER_B", B_OWNER))
+
+    assert sweep(resolver, B_OWNER, 5385, 13118) == [PlayerLeft("PLAYER_B")]
+    assert sweep(resolver, A_OWNER, 7035) == [PlayerLeft("PLAYER_A")]
+
+
+@pytest.mark.parametrize("stranger", [12345, 0])
+def test_cleanup_of_a_stranger_or_of_nobody_removes_no_one(stranger: int) -> None:
+    """Mid-stream starts and failed logins leave owners nobody joined as;
+    unowned objects are swept with owner 0."""
 
     resolver = ValheimResolver()
     resolver.resolve(join("PLAYER_A", A_OWNER))
 
-    assert resolver.resolve(DisconnectMarkerObserved()) == ()
-    assert resolver.resolve(SocketClosedObserved(8)) == ()
+    assert sweep(resolver, stranger) == []
     assert resolver.resolve(death("PLAYER_A")) == ()
-    assert leave(resolver, A_OWNER) == [PlayerLeft("PLAYER_A")]
+    assert sweep(resolver, A_OWNER) == [PlayerLeft("PLAYER_A")]
 
 
-def test_stale_disconnect_does_not_authorise_later_cleanup() -> None:
+def test_a_player_who_quits_while_dead_still_leaves() -> None:
     resolver = ValheimResolver()
-    resolver.resolve(join("PLAYER_A", A_OWNER))
-    resolver.resolve(DisconnectMarkerObserved())
-    resolver.resolve(SocketClosedObserved(7))
+    resolver.resolve(join("PLAYER_A", A_OWNER, 7))
+    resolver.resolve(death("PLAYER_A"))
 
-    assert resolver.resolve(cleanup(A_OWNER)) == ()
-
-
-def test_cleanup_without_disconnect_is_not_a_leave() -> None:
-    resolver = ValheimResolver()
-    resolver.resolve(join("PLAYER_A", A_OWNER))
-
-    assert resolver.resolve(cleanup(A_OWNER)) == ()
-
-
-def test_one_marker_resolves_at_most_one_player() -> None:
-    resolver = ValheimResolver()
-    resolver.resolve(join("PLAYER_A", A_OWNER))
-    resolver.resolve(join("PLAYER_B", B_OWNER))
-    resolver.resolve(DisconnectMarkerObserved())
-
-    assert resolver.resolve(cleanup(B_OWNER)) == (PlayerLeft("PLAYER_B"),)
-    assert resolver.resolve(cleanup(A_OWNER)) == ()
+    assert sweep(resolver, A_OWNER, 12) == [PlayerLeft("PLAYER_A")]
 
 
 def test_reconnect_refreshes_owner() -> None:
@@ -114,23 +108,60 @@ def test_reconnect_refreshes_owner() -> None:
     resolver.resolve(join("PLAYER_A", A_OWNER))
 
     assert resolver.resolve(join("PLAYER_A", 42)) == ()
-    assert leave(resolver, 42) == [PlayerLeft("PLAYER_A")]
+    assert sweep(resolver, 42) == [PlayerLeft("PLAYER_A")]
+
+
+def test_late_cleanup_of_an_old_connection_cannot_evict_the_new_one() -> None:
+    """A player reconnects before the server times out their old peer."""
+
+    resolver = ValheimResolver()
+    resolver.resolve(join("PLAYER_A", A_OWNER))
+    resolver.resolve(join("PLAYER_A", 42))
+
+    assert sweep(resolver, A_OWNER) == []
 
 
 def test_player_can_rejoin_after_leaving() -> None:
     resolver = ValheimResolver()
     resolver.resolve(join("PLAYER_A", A_OWNER))
-    leave(resolver, A_OWNER)
+    sweep(resolver, A_OWNER)
 
     assert resolver.resolve(join("PLAYER_A", A_OWNER, 9)) == (PlayerJoined("PLAYER_A"),)
 
 
-@pytest.mark.parametrize(
-    "observation",
-    [death("UNSEEN"), cleanup(12345), DisconnectMarkerObserved(), SocketClosedObserved(1)],
-)
+def test_a_zero_peer_count_names_everybody() -> None:
+    """The backstop for any removal whose cleanup the log never showed."""
+
+    resolver = ValheimResolver()
+    resolver.resolve(join("PLAYER_B", B_OWNER))
+    resolver.resolve(join("PLAYER_A", A_OWNER))
+
+    assert resolver.resolve(PeerCountObserved(0)) == (
+        PlayerLeft("PLAYER_A"),
+        PlayerLeft("PLAYER_B"),
+        PlayerCount(0),
+    )
+    assert sweep(resolver, A_OWNER) == []
+    assert resolver.resolve(join("PLAYER_A", A_OWNER, 2)) == (PlayerJoined("PLAYER_A"),)
+
+
+def test_a_nonzero_peer_count_names_nobody() -> None:
+    resolver = ValheimResolver()
+    resolver.resolve(join("PLAYER_A", A_OWNER))
+    resolver.resolve(join("PLAYER_B", B_OWNER))
+
+    assert resolver.resolve(PeerCountObserved(1)) == (PlayerCount(1),)
+    assert sweep(resolver, B_OWNER) == [PlayerLeft("PLAYER_B")]
+
+
+@pytest.mark.parametrize("observation", [death("UNSEEN"), cleanup(12345), cleanup(0)])
 def test_mid_stream_input_is_silent(observation) -> None:
     assert ValheimResolver().resolve(observation) == ()
+
+
+@pytest.mark.parametrize(("count"), [0, 3])
+def test_mid_stream_peer_count_is_passed_on(count: int) -> None:
+    assert ValheimResolver().resolve(PeerCountObserved(count)) == (PlayerCount(count),)
 
 
 @pytest.mark.parametrize(

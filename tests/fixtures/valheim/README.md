@@ -39,3 +39,13 @@ start on the 1.0 release build (l-1.0.7, network version 39), taken on
 drain with the five-step save that replaced `World saved ( N ms )`. The
 IP, PlayFab identities, lobby and network ids, and the join code are
 replaced.
+
+`crossplay-timeout.log` is a sanitized excerpt of a two-player crossplay
+session on the 1.0.16 build, taken on 2026-09-29: the joins, a PlayFab
+network error the server recovered from, deaths and respawns, the
+ten-minutely `Connections N ZDOS` count (and a dungeon's bare `Connections 4`
+beside it), then both players lost to `ZRpc timeout detected` with no
+`RPC_Disconnect`, their cleanup, and the empty server's zero counts. Player
+names, owners, PlayFab peer ids, network and lobby ids, and the join code
+are replaced; lines between the excerpts are omitted, and the first count
+line's ZDO figures are synthetic.

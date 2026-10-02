@@ -3,7 +3,8 @@
 Every pattern is an observation of a specific server build, not an API. The
 recorded evidence is in ``tests/fixtures/valheim/``: ``presence-session.log``
 and ``crossplay-session.log`` (l-0.221.12, network version 36) and
-``release-1.0-session.log`` (l-1.0.7, network version 39). Re-verify each
+``release-1.0-session.log`` (l-1.0.7, network version 39), and
+``crossplay-timeout.log`` (l-1.0.16). Re-verify each
 pattern against a fresh capture whenever the game updates.
 """
 
@@ -37,23 +38,18 @@ class CharacterObserved:
 
 
 @dataclass(frozen=True, slots=True)
-class DisconnectMarkerObserved:
-    """A disconnect began. Carries no identity; the resolver correlates it."""
-
-
-@dataclass(frozen=True, slots=True)
 class AbandonedZdoObserved:
-    """Cleanup of an object left behind by a departed owner. Many per disconnect."""
+    """Cleanup of an object whose owner is no longer connected. Many per disconnect."""
 
     zdoid: ZdoId
     owner: int
 
 
 @dataclass(frozen=True, slots=True)
-class SocketClosedObserved:
-    """A connection's socket closed. Ends the current disconnect sequence."""
+class PeerCountObserved:
+    """The server's own count of connected, handshaken peers, logged every ten minutes."""
 
-    connection_id: int
+    count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,9 +82,8 @@ class VersionObserved:
 
 type ValheimObservation = (
     CharacterObserved
-    | DisconnectMarkerObserved
     | AbandonedZdoObserved
-    | SocketClosedObserved
+    | PeerCountObserved
     | ServerReadyObserved
     | WorldSavedObserved
     | SaveFailedObserved
@@ -103,12 +98,13 @@ _TIMESTAMP_PREFIX: Final = re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}:\s*
 _CHARACTER: Final = re.compile(
     r"Got character ZDOID from (?P<name>.+) : (?P<owner>-?\d+):(?P<object_id>\d+)"
 )
-_DISCONNECT_MARKER: Final = re.compile(r"RPC_Disconnect")
 _ABANDONED_ZDO: Final = re.compile(
     r"Destroying abandoned non persistent zdo "
     r"(?P<owner>-?\d+):(?P<object_id>\d+) owner (?P<cleanup_owner>-?\d+)"
 )
-_SOCKET_CLOSED: Final = re.compile(r"Closing socket (?P<connection_id>\d+)")
+# ``Game.ServerLog`` every 600 s. Dungeon generation logs a bare
+# ``Connections N`` (room joints, not players); only the full shape is a count.
+_PEER_COUNT: Final = re.compile(r"Connections (?P<count>\d+) ZDOS:\d+\s+sent:\d+ recv:\d+")
 _SERVER_READY: Final = re.compile(r"Game server connected")
 # Two builds, two grammars. Before 1.0 a save ended with one line:
 #   World saved ( 61.499ms )
@@ -149,15 +145,13 @@ class ValheimObserver:
                 name=match["name"],
                 zdoid=ZdoId(owner=int(match["owner"]), object_id=int(match["object_id"])),
             )
-        if _DISCONNECT_MARKER.fullmatch(message):
-            return DisconnectMarkerObserved()
         if match := _ABANDONED_ZDO.fullmatch(message):
             return AbandonedZdoObserved(
                 zdoid=ZdoId(owner=int(match["owner"]), object_id=int(match["object_id"])),
                 owner=int(match["cleanup_owner"]),
             )
-        if match := _SOCKET_CLOSED.fullmatch(message):
-            return SocketClosedObserved(connection_id=int(match["connection_id"]))
+        if match := _PEER_COUNT.fullmatch(message):
+            return PeerCountObserved(count=int(match["count"]))
         if _SERVER_READY.fullmatch(message):
             return ServerReadyObserved()
         if match := _WORLD_SAVED.fullmatch(message) or _WORLD_SAVED_1_0.fullmatch(message):
