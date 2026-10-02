@@ -8,6 +8,8 @@ stdin so tests control timing exactly:
     join NAME OWNER      ->  Got character ZDOID from NAME : OWNER:1
     die NAME             ->  Got character ZDOID from NAME : 0:0
     leave OWNER CONN     ->  RPC_Disconnect / cleanup for OWNER / Closing socket CONN
+    drop OWNER           ->  ZRpc timeout detected / cleanup for OWNER (a lost connection)
+    peers N              ->  the ten-minutely  Connections N ZDOS:... line
     autosave             ->  World save (5/5) done. Total time [5ms]
     say TEXT             ->  TEXT, verbatim
 
@@ -118,6 +120,11 @@ def main() -> int:
                 emit(f"Destroying abandoned non persistent zdo {owner}:43 owner {owner}")
                 emit(f"Destroying abandoned non persistent zdo {owner}:42 owner {owner}")
                 emit(f"Closing socket {conn or 1}")
+            case "drop":
+                emit("ZRpc timeout detected")
+                emit(f"Destroying abandoned non persistent zdo {rest}:43 owner {rest}")
+            case "peers":
+                emit(f" Connections {rest} ZDOS:16260  sent:0 recv:0")
             case "autosave":
                 write_save(args.save_dir, args.world, corrupt=False, size=args.save_size)
                 emit("World save (5/5) done. Total time [5ms]")

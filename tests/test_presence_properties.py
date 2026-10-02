@@ -17,8 +17,7 @@ from naust.games.facts import (
 from naust.games.valheim.observer import (
     AbandonedZdoObserved,
     CharacterObserved,
-    DisconnectMarkerObserved,
-    SocketClosedObserved,
+    PeerCountObserved,
     ValheimObserver,
     ZdoId,
 )
@@ -41,9 +40,9 @@ FACTS: st.SearchStrategy[Fact] = st.one_of(
 VALHEIM_OBSERVATIONS = st.one_of(
     st.builds(CharacterObserved, NAMES, st.builds(ZdoId, OWNERS, OBJECT_IDS)),
     st.builds(CharacterObserved, NAMES, st.just(ZdoId(0, 0))),
-    st.just(DisconnectMarkerObserved()),
     st.builds(AbandonedZdoObserved, st.builds(ZdoId, OWNERS, OBJECT_IDS), OWNERS),
-    st.builds(SocketClosedObserved, st.integers(min_value=1, max_value=9)),
+    st.builds(AbandonedZdoObserved, st.builds(ZdoId, OWNERS, OBJECT_IDS), st.just(0)),
+    st.builds(PeerCountObserved, st.integers(min_value=0, max_value=3)),
 )
 
 
@@ -82,19 +81,27 @@ def test_repeated_facts_are_idempotent(facts: list[Fact]) -> None:
 
 @settings(max_examples=300)
 @given(st.lists(VALHEIM_OBSERVATIONS, max_size=60))
-def test_one_disconnect_marker_removes_at_most_one_player(observations) -> None:
+def test_only_evidence_removes_a_player(observations) -> None:
+    """A present player leaves only on cleanup naming their current owner, or
+    when the server says it has no peers at all."""
+
     resolver = ValheimResolver()
     tracker = PresenceTracker()
-    left_since_marker = 0
+    owners: dict[str, int] = {}
 
     for observation in observations:
-        if isinstance(observation, DisconnectMarkerObserved):
-            left_since_marker = 0
+        if isinstance(observation, CharacterObserved) and not observation.zdoid.is_null:
+            owners[observation.name] = observation.zdoid.owner
         for fact in resolver.resolve(observation):
             transition = tracker.observe(fact)
-            if transition is not None:
-                left_since_marker += len(transition.left)
-        assert left_since_marker <= 1
+            for name in transition.left if transition else ():
+                match observation:
+                    case PeerCountObserved(count=0):
+                        pass
+                    case AbandonedZdoObserved(owner=owner):
+                        assert owners[name] == owner
+                    case _:
+                        raise AssertionError(f"{name} left on {observation!r}")
         assert 0 <= tracker.count <= tracker.max_players
 
 
@@ -109,7 +116,6 @@ def test_unknown_cleanup_cannot_remove_a_known_player(
     for name, owner in present.items():
         resolver.resolve(CharacterObserved(name, ZdoId(owner, 1)))
 
-    resolver.resolve(DisconnectMarkerObserved())
     assert resolver.resolve(AbandonedZdoObserved(ZdoId(stranger, 1), owner=stranger)) == ()
 
 

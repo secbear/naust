@@ -8,6 +8,7 @@ from naust.games.facts import (
     BackendReady,
     BackendVersion,
     JoinInfo,
+    PlayerCount,
     PlayerJoined,
     PlayerLeft,
     SaveCompleted,
@@ -142,3 +143,54 @@ def test_release_1_0_fixture_replays_version_ready_join_code_and_save() -> None:
     assert SaveCompleted(43.0) in facts
     assert not any(isinstance(fact, SaveFailed) for fact in facts)
     assert tracker.count == 0
+
+
+TIMEOUT_FIXTURE = FIXTURE.parent / "crossplay-timeout.log"
+
+
+def _replay_lines(lines) -> tuple[list[ReplayEvent], PresenceTracker]:
+    tracker = PresenceTracker()
+    return list(replay(lines, ValheimObserver(), ValheimResolver(), tracker)), tracker
+
+
+def test_crossplay_timeouts_without_rpc_disconnect_are_leaves() -> None:
+    """The 2026-09-29 session that kept a VM up for two days: both players
+    dropped by network timeout and the agent counted them present forever."""
+
+    with TIMEOUT_FIXTURE.open(encoding="utf-8") as lines:
+        events, tracker = _replay_lines(lines)
+    transitions = [(e.line_number, t) for e in events for t in e.transitions]
+
+    assert [t.count for _, t in transitions] == [1, 2, 1, 0]
+    assert transitions[2][1].left == {"PLAYER_B"}
+    assert transitions[3][1].left == {"PLAYER_A"}
+    timeouts = [
+        n
+        for n, line in enumerate(TIMEOUT_FIXTURE.read_text().splitlines(), 1)
+        if "ZRpc timeout" in line
+    ]
+    assert timeouts[0] < transitions[2][0] < timeouts[1] < transitions[3][0]
+    assert tracker.count == 0
+
+
+def test_a_zero_peer_count_catches_leaves_the_log_never_showed() -> None:
+    lines = [
+        line
+        for line in TIMEOUT_FIXTURE.read_text(encoding="utf-8").splitlines(keepends=True)
+        if "Destroying abandoned" not in line
+    ]
+    events, tracker = _replay_lines(lines)
+    transitions = [(e.line_number, t) for e in events for t in e.transitions]
+
+    assert [t.count for _, t in transitions] == [1, 2, 1, 0]
+    first_zero = next(n for n, line in enumerate(lines, 1) if "Connections 0 ZDOS" in line)
+    assert {n for n, _ in transitions[2:]} == {first_zero}
+    assert tracker.count == 0
+
+
+def test_dungeon_connection_lines_are_not_a_peer_count() -> None:
+    with TIMEOUT_FIXTURE.open(encoding="utf-8") as lines:
+        events, _ = _replay_lines(lines)
+    counts = [f.count for e in events for f in e.facts if isinstance(f, PlayerCount)]
+
+    assert counts == [1, 2, 2, 0, 0]  # the fixture's "Connections 4" is room joints
